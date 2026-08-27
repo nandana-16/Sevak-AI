@@ -1,0 +1,17 @@
+fastapi>=0.115
+uvicorn[standard]>=0.34
+sqlalchemy>=2.0.36
+pydantic>=2.11
+pydantic-settings>=2.7
+python-jose[cryptography]>=3.3
+bcrypt>=4.1
+python-multipart>=0.0.20
+python-dotenv>=1.0.1
+langgraph>=0.2.60
+langchain-core>=0.3.28
+chromadb>=0.6
+google-genai>=0.3
+faker>=33.1
+reportlab>=4.2.5
+apscheduler>=3.11
+httpx>=0.28

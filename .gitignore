@@ -1,0 +1,22 @@
+# Python
+backend/venv/
+__pycache__/
+*.pyc
+
+# Env / secrets
+.env
+.env.local
+!.env.example
+!.env.development
+
+# Data (synthetic, regenerable — and never commit anything that could look like real patient data)
+backend/data/
+
+# Node
+node_modules/
+web/*/dist/
+web/*/.vite/
+
+# OS
+.DS_Store
+Thumbs.db
