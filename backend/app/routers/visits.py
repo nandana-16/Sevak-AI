@@ -29,7 +29,7 @@ from app.core.database import get_db
 from app.core.scoping import audit, get_patient_or_404
 from app.core.security import get_current_worker
 from app.models.db import InputMode, ScheduledVisit, ScheduleStatus, Visit, Worker
-from app.models.schemas import VisitCreate, VisitDetail
+from app.models.schemas import ActionOut, CitationOut, VisitCreate, VisitDetail
 from app.services import stt, visit_service
 
 log = logging.getLogger("sevakai.api.visits")
@@ -49,11 +49,18 @@ def _to_detail(db: Session, visit: Visit) -> VisitDetail:
     detail = VisitDetail.model_validate(visit)
     detail.next_visit_due = due
     detail.refer_to_facility = visit.risk_level.value == "red"
-    detail.symptoms = visit.symptoms or []
-    detail.danger_signs = visit.danger_signs or []
-    detail.guideline_citations = visit.guideline_citations or []
-    detail.recommended_actions = visit.recommended_actions or []
-    detail.degraded_steps = visit.degraded_steps or []
+    detail.symptoms = [str(s) for s in (visit.symptoms or [])]
+    detail.danger_signs = [str(s) for s in (visit.danger_signs or [])]
+    detail.degraded_steps = [str(s) for s in (visit.degraded_steps or [])]
+    # These columns hold plain JSON, so they have to be validated into their
+    # models rather than assigned as dicts - otherwise Pydantic serialises
+    # them on a best-effort basis and warns on every response.
+    detail.guideline_citations = [
+        CitationOut.model_validate(c) for c in (visit.guideline_citations or [])
+    ]
+    detail.recommended_actions = [
+        ActionOut.model_validate(a) for a in (visit.recommended_actions or [])
+    ]
     return detail
 
 
