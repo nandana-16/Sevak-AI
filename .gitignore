@@ -23,3 +23,11 @@ Thumbs.db
 
 # Guideline PDFs are fetched by scripts/fetch_guidelines.py, not committed
 backend/data/guidelines/
+
+# Android
+android/local.properties
+android/.gradle/
+android/build/
+android/app/build/
+android/.idea/
+*.iml

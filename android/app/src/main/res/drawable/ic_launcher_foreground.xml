@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A shield (care, protection) carrying a medical cross, drawn inside the
+     66dp adaptive-icon safe zone so no launcher mask clips it. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,28 L76,36 L76,54 C76,66 67,75 54,80 C41,75 32,66 32,54 L32,36 Z" />
+    <path
+        android:fillColor="#1B7A43"
+        android:pathData="M50,42 h8 v8 h8 v8 h-8 v8 h-8 v-8 h-8 v-8 h8 Z" />
+</vector>
