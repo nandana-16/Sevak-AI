@@ -1,40 +1,59 @@
+from functools import lru_cache
+from pathlib import Path
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+BACKEND_ROOT = Path(__file__).resolve().parents[2]
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_file=BACKEND_ROOT / ".env", env_file_encoding="utf-8", extra="ignore"
+    )
 
-    app_name: str = "SevakAI Backend"
     environment: str = "development"
-
     database_url: str = "sqlite:///./data/sevakai.db"
 
-    jwt_secret: str = "dev-secret-change-in-production"
+    jwt_secret: str = "dev-only-insecure-secret"
     jwt_algorithm: str = "HS256"
-    jwt_expire_minutes: int = 60 * 12
+    jwt_expire_minutes: int = 20160
 
-    # LLM provider: "gemini" or "mock"
     llm_provider: str = "mock"
-    gemini_api_key: str = ""
-    gemini_model: str = "gemini-3.6-flash"
+    groq_api_key: str = ""
+    groq_model: str = "llama-3.3-70b-versatile"
 
-    # STT provider: "bhashini" or "mock"
     stt_provider: str = "mock"
-    bhashini_api_key: str = ""
-    bhashini_user_id: str = ""
-    bhashini_endpoint: str = "https://meity-auth.ulcacontrib.org/ulca/apis/v0/model/getModelsPipeline"
+    whisper_model: str = "small"
 
-    # WhatsApp: "meta" or "mock"
-    whatsapp_provider: str = "mock"
-    whatsapp_api_token: str = ""
-    whatsapp_phone_number_id: str = ""
+    aadhaar_hash_salt: str = "dev-only-salt"
 
     chroma_persist_dir: str = "./data/chroma"
+    guidelines_dir: str = "./data/guidelines"
+    audio_dir: str = "./data/audio"
 
-    high_risk_alert_seconds: int = 60
-    escalation_threshold_hours: int = 48
+    def _abs(self, value: str) -> Path:
+        path = Path(value)
+        return path if path.is_absolute() else (BACKEND_ROOT / path).resolve()
 
-    cors_origins: list[str] = ["*"]
+    @property
+    def chroma_path(self) -> Path:
+        return self._abs(self.chroma_persist_dir)
+
+    @property
+    def guidelines_path(self) -> Path:
+        return self._abs(self.guidelines_dir)
+
+    @property
+    def audio_path(self) -> Path:
+        return self._abs(self.audio_dir)
 
 
-settings = Settings()
+@lru_cache
+def get_settings() -> Settings:
+    settings = Settings()
+    for directory in (settings.chroma_path, settings.guidelines_path, settings.audio_path):
+        directory.mkdir(parents=True, exist_ok=True)
+    return settings
+
+
+settings = get_settings()

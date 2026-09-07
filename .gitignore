@@ -20,3 +20,6 @@ web/*/.vite/
 # OS
 .DS_Store
 Thumbs.db
+
+# Guideline PDFs are fetched by scripts/fetch_guidelines.py, not committed
+backend/data/guidelines/
