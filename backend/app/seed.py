@@ -18,6 +18,7 @@ from datetime import date, datetime, timedelta, timezone
 from sqlalchemy import delete
 
 from app.core.database import SessionLocal, engine, init_db
+from app.core.immunisation import SCHEDULE as IMMUNISATION_SCHEDULE
 from app.core.security import hash_aadhaar, hash_pin
 from app.models.db import (
     AuditLog,
@@ -73,29 +74,6 @@ PAST = [
     "Malaria", "Typhoid", "Dengue", "Chickenpox", "Jaundice", "Pneumonia",
 ]
 
-# National Immunization Schedule, infant portion: (vaccine, dose, weeks after birth)
-IMMUNISATION_SCHEDULE = [
-    ("BCG", None, 0),
-    ("Hepatitis B", "Birth dose", 0),
-    ("OPV", "0", 0),
-    ("OPV", "1", 6),
-    ("Pentavalent", "1", 6),
-    ("Rotavirus", "1", 6),
-    ("fIPV", "1", 6),
-    ("PCV", "1", 6),
-    ("OPV", "2", 10),
-    ("Pentavalent", "2", 10),
-    ("Rotavirus", "2", 10),
-    ("OPV", "3", 14),
-    ("Pentavalent", "3", 14),
-    ("Rotavirus", "3", 14),
-    ("fIPV", "2", 14),
-    ("PCV", "2", 14),
-    ("Measles-Rubella", "1", 39),      # 9 months
-    ("PCV Booster", None, 39),
-    ("JE", "1", 39),
-    ("Vitamin A", "1st dose", 39),
-]
 
 HIGH_RISK_FACTORS = [
     "Severe anaemia", "Previous caesarean section", "Age over 35",
