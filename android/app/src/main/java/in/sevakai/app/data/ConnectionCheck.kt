@@ -61,7 +61,7 @@ object ConnectionCheck {
         if (normalised.contains("10.0.2.2")) {
             // Worth catching explicitly: it looks like an ordinary timeout and
             // costs people a lot of time to work out.
-            val emulator = isProbablyEmulator()
+            val emulator = SettingsStore.isEmulator()
             if (!emulator) {
                 return@withContext Result.Failed(
                     "10.0.2.2 only works on the emulator",
@@ -141,12 +141,4 @@ object ConnectionCheck {
         return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
     }
 
-    private fun isProbablyEmulator(): Boolean =
-        android.os.Build.FINGERPRINT.contains("generic", true) ||
-            android.os.Build.FINGERPRINT.startsWith("unknown") ||
-            android.os.Build.MODEL.contains("Emulator", true) ||
-            android.os.Build.MODEL.contains("Android SDK built for", true) ||
-            android.os.Build.HARDWARE.contains("goldfish", true) ||
-            android.os.Build.HARDWARE.contains("ranchu", true) ||
-            android.os.Build.PRODUCT.contains("sdk", true)
 }

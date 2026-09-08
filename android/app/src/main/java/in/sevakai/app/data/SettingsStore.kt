@@ -32,11 +32,11 @@ class SettingsStore(private val context: Context) {
     }
 
     val serverUrl: Flow<String> = context.settingsDataStore.data.map {
-        it[Keys.SERVER_URL] ?: BuildConfig.API_BASE_URL
+        it[Keys.SERVER_URL] ?: defaultUrl()
     }
 
     suspend fun current(): String =
-        context.settingsDataStore.data.first()[Keys.SERVER_URL] ?: BuildConfig.API_BASE_URL
+        context.settingsDataStore.data.first()[Keys.SERVER_URL] ?: defaultUrl()
 
     suspend fun setServerUrl(raw: String) {
         context.settingsDataStore.edit { it[Keys.SERVER_URL] = normalise(raw) }
@@ -49,6 +49,27 @@ class SettingsStore(private val context: Context) {
     companion object {
         const val EMULATOR = "http://10.0.2.2:8010/"
         const val USB = "http://127.0.0.1:8010/"
+
+        /**
+         * Pick a default that has a chance of working on this device.
+         *
+         * The build-time constant is the emulator address, which is meaningless
+         * on real hardware. Defaulting a phone to it guarantees that the very
+         * first sign-in fails, so the default is chosen at runtime instead: the
+         * emulator address on an emulator, and the `adb reverse` loopback on a
+         * phone, which is the usual way a phone reaches a development backend.
+         */
+        fun defaultUrl(): String =
+            if (isEmulator()) BuildConfig.API_BASE_URL else USB
+
+        fun isEmulator(): Boolean =
+            android.os.Build.FINGERPRINT.contains("generic", true) ||
+                android.os.Build.FINGERPRINT.startsWith("unknown") ||
+                android.os.Build.MODEL.contains("Emulator", true) ||
+                android.os.Build.MODEL.contains("Android SDK built for", true) ||
+                android.os.Build.HARDWARE.contains("goldfish", true) ||
+                android.os.Build.HARDWARE.contains("ranchu", true) ||
+                android.os.Build.PRODUCT.contains("sdk", true)
 
         /**
          * Accept what someone actually types. "192.168.1.7" should work as
