@@ -263,6 +263,75 @@ Be ready for the obvious question:
 
 ---
 
+## What to say into the mic
+
+Android's `hi-IN` recogniser returns **Devanagari**, not romanised Hinglish, and
+the extraction prompt reads both. Speak naturally at a normal pace — do not
+over-enunciate, it makes recognition worse.
+
+### The hero case — Roshni Solanki (turns red)
+
+> रोशनी को तीन दिन से बहुत तेज़ सर दर्द है और आँखों के आगे धुंधला दिख रहा है।
+> पैर में बहुत सूजन है। बच्चा कल से कम हिल रहा है।
+
+*Roshni ko teen din se bahut tez sar dard hai aur aankhon ke aage dhundla dikh
+raha hai. Pair mein bahut sujan hai. Bachcha kal se kam hil raha hai.*
+
+("Three days of severe headache and blurred vision. A lot of swelling in the
+feet. The baby has been moving less since yesterday.")
+
+Then **type** BP **168** / **112** in Measurements. Expect: red, four danger
+signs, PMSMA citations, follow-up tomorrow.
+
+### A routine case — Bhavna Chauhan (stays green)
+
+> आज रूटीन जाँच थी। कोई शिकायत नहीं है। खाना ठीक खा रही है और आयरन की गोली
+> रोज़ ले रही है। कोई दर्द, बुखार या सूजन नहीं है।
+
+*Aaj routine jaanch thi. Koi shikayat nahi hai. Khana theek kha rahi hai aur
+iron ki goli roz le rahi hai. Koi dard, bukhar ya sujan nahi hai.*
+
+Type BP **112** / **74**. Expect green, and a routine follow-up weeks out —
+useful to show immediately after the red case, because it proves the classifier
+is reading the findings rather than flagging everything.
+
+### An infant case — Aarav Rathore (turns red)
+
+> बच्चा दो दिन से दूध नहीं पी रहा है। बहुत सुस्ती है और छूने पर ठंडा लग रहा है।
+> साँस तेज़ चल रही है।
+
+*Bachcha do din se doodh nahi pi raha hai. Bahut susti hai aur chhoone par
+thanda lag raha hai. Saans tez chal rahi hai.*
+
+("Not feeding for two days. Very lethargic, cold to the touch. Breathing fast.")
+
+Expect red against IMNCI/HBNC newborn danger signs — a different guideline
+document from the pregnancy case, which is worth pointing out.
+
+### In English instead
+
+Tap the **English** pill next to the mic if the Hindi pack is missing:
+
+> "She has had a severe headache for three days with blurred vision. There is a
+> lot of swelling in her feet, and the baby has been moving less since
+> yesterday."
+
+### Speak the symptoms, type the numbers
+
+Both work — the prompt handles Hindi numerals, including that
+"एक सौ अड़सठ बटा एक सौ बारह" is 168/112 and not 158/112, which it originally
+got wrong. But a misheard vital sign is the one error that would genuinely
+matter, so type them.
+
+That is not a workaround, it is the design: values typed into the Measurements
+fields override anything the model heard. Say so out loud —
+
+> "The story is spoken, the numbers are typed. A number a human put in a
+> labelled box beats a number recovered from noisy audio, so the typed value
+> always wins."
+
+---
+
 ## Voice on the emulator
 
 **The emulator has no Hindi offline language pack** — the log shows

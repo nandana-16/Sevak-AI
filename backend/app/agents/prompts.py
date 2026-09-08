@@ -14,7 +14,20 @@ peelia/piliya=jaundice, jhatke/daura=convulsions, behosh=unconscious,
 susti=lethargy, doodh nahi pi raha=not feeding, bachcha hil nahi raha=reduced
 fetal movement, mahina/mahine=month(s), din=day(s), saal=year(s),
 vazan=weight, tika=vaccination, goli=tablet, BP=blood pressure,
-naabhi=umbilicus, dhundla dikhna=blurred vision, kamar dard=back pain."""
+naabhi=umbilicus, dhundla dikhna=blurred vision, kamar dard=back pain.
+
+Transcripts may arrive in Devanagari rather than roman script - the on-device
+recogniser returns Hindi as it is written. Read both.
+
+Spoken numbers arrive as words, not digits, and they are the easiest thing to
+get wrong. Convert carefully, digit by digit:
+  एक=1 दो=2 तीन=3 चार=4 पाँच=5 छह=6 सात=7 आठ=8 नौ=9 दस=10
+  बीस=20 तीस=30 चालीस=40 पचास=50 साठ=60 सत्तर=70 अस्सी=80 नब्बे=90 सौ=100
+  अड़सठ=68  अट्ठावन=58  छियासठ=66  बहत्तर=72  अठहत्तर=78  बारह=12
+"बटा" or "बाई" between two numbers means "over", as in blood pressure:
+"एक सौ अड़सठ बटा एक सौ बारह" is 168/112, NOT 158/112. Re-read the tens word
+before committing to a value. If a number is at all unclear, return null for
+it rather than guessing - a wrong vital sign is far worse than a missing one."""
 
 
 EXTRACTION_SYSTEM = f"""You are a clinical data extraction agent for India's ASHA
