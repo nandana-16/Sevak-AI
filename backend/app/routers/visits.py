@@ -18,7 +18,7 @@ from __future__ import annotations
 import json
 import logging
 import uuid
-from datetime import date, datetime
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from sqlalchemy import select

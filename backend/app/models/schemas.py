@@ -268,6 +268,10 @@ class EscalationOut(ORMModel):
     reason: str
     acknowledged_at: datetime | None = None
     resolved: bool = False
+    # Carries either a supervisor's sign-off note, or an automatic note that a
+    # later visit found the patient improved. Without this the annotation is
+    # written to the database and never seen by anyone.
+    resolution_note: str | None = None
 
 
 # --- Misc -------------------------------------------------------------------
