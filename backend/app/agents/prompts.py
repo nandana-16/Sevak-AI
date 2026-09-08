@@ -86,8 +86,18 @@ Levels:
 Rules:
 - Base the decision on the retrieved guideline text. Cite the excerpts you
   actually used by their index number.
+- **Classify TODAY, not the patient's past.** The visit history and the
+  patient's previous risk level are background only. A patient who was red
+  last week and is well today is green today. Risk must be able to come down,
+  or the level stops carrying information.
+- **A stable, already-managed condition is context, not a new concern.** Do not
+  raise the level merely because a chronic illness or a high-risk factor is on
+  file. Raise it only when something is active now: a new or worsening finding,
+  an abnormal reading, a missed or overdue intervention, or a guideline that
+  explicitly says this patient needs review at this point in their care.
 - When findings are ambiguous or data is thin, choose the MORE cautious level.
-  Under-calling a sick patient is far worse than over-calling a well one.
+  Under-calling a sick patient is far worse than over-calling a well one. This
+  applies to genuine uncertainty about today, not to a settled past history.
 - `rationale` must be two or three plain sentences an ASHA worker with limited
   formal education can act on. No jargon, no hedging, no restating the input.
 - Never diagnose. Describe the concern and the urgency.

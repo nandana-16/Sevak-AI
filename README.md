@@ -54,11 +54,16 @@ and put it in `backend/.env` as `GROQ_API_KEY`.
 Verify everything is wired:
 
 ```bash
-python -m scripts.smoke_test
+python -m scripts.smoke_test          # 40 checks over the whole worker journey
+python -m scripts.test_risk_downgrade # risk moves both directions, not just up
+python -m scripts.test_escalations    # one open alert per patient, not duplicates
+python -m scripts.try_pipeline        # run the agents directly, for prompt tuning
 ```
 
-That runs 40 checks over the whole worker journey, including roster isolation
-and offline-retry idempotency.
+The smoke test covers roster isolation (a worker gets 404 on someone else's
+patient) and offline-retry idempotency. The two behavioural tests each submit
+real visits through the live pipeline, so they pace themselves around the free
+tier's token window and take a couple of minutes.
 
 ### 2. Android app
 
@@ -102,6 +107,12 @@ records explicit consent, and stores **only a salted hash and the last four
 digits** — never the number. Swapping in a real KUA integration means replacing
 one function in `backend/app/core/aadhaar.py`; nothing else changes.
 
+→ **[docs/AADHAAR.md](docs/AADHAAR.md)** explains this in full: why the Verhoeff
+checksum is a real check and not a formality, why the hash is salted, what is
+and is not stored, and the two upgrade paths (UIDAI Offline e-KYC XML, and
+ABHA/ABDM). Read this before presenting — it is the design decision most likely
+to be challenged.
+
 **Deterministic rules are a safety floor, not just a fallback.** The clinical
 thresholds in `backend/app/agents/rules.py` run on every visit, and they can
 only *raise* the final risk level, never lower it. If a documented IMNCI danger
@@ -109,6 +120,28 @@ sign or a PMSMA severe-hypertension reading is present, the visit comes back
 red regardless of what the model concluded. A language model being talked out
 of a danger sign is a failure mode worth engineering away rather than hoping
 about.
+
+**Risk describes today, and moves in both directions.** The floor applies
+*within* a visit, never across visits. A risk level is a statement about the
+patient's condition at that visit, not a label they keep — so a red patient who
+is well next week is classified green next week, and the roster updates. This
+is load-bearing: if red were sticky, the roster would fill with permanent red
+and the colour would stop carrying information.
+
+Two things make it work. The classifier is told explicitly that visit history
+is background, and that a stable, already-managed chronic condition is context
+rather than a live concern. And `patient.current_risk` is overwritten by every
+visit rather than being maxed with the previous value.
+
+Verified by `scripts/test_risk_downgrade.py`, which drives a patient to red,
+then submits an unremarkable visit and asserts the level comes down and the
+follow-up interval stretches back out (1 day → 14 days).
+
+Escalations are handled slightly differently on purpose: repeated red visits
+**update** the patient's single open escalation instead of stacking duplicates
+in the supervisor's queue, and a later non-red visit annotates it with the
+improvement — but does **not** auto-resolve it. A red event still needs a human
+to sign it off. See `scripts/test_escalations.py`.
 
 **Degradation is never silent.** When the LLM is unreachable and rules stand in
 for it, the step is recorded and shown on the result screen in the app. A demo
@@ -163,8 +196,18 @@ Everything runs on free tiers.
 
 The binding constraint is Groq's free tier at **8,000 tokens/minute** — roughly
 **two visits per minute** sustained. A single visit is never slow; only
-back-to-back submissions queue. Worth knowing when pacing a live demo. Daily
-request limits are not a practical concern at 1,000/day.
+back-to-back submissions queue.
+
+In practice this is not a real limit: a home visit takes 5–10 minutes, so one
+worker generates at most ~12 visits an hour, an order of magnitude below the
+ceiling. It matters only when a scripted demo fires several visits back to back
+(pace them ~30 s apart), or when many workers share one API key.
+
+→ **[docs/SCALING.md](docs/SCALING.md)** has the measured per-visit cost, what
+to buy first when the free tier does bite, and the alternatives considered and
+rejected. Headline: at paid Groq rates a visit costs roughly **₹0.10–0.20**, so
+a 200-worker district runs at under ₹10,000/month. Cost is not what stops this
+scaling.
 
 ---
 

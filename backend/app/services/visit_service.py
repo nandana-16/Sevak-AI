@@ -109,6 +109,8 @@ def process(db: Session, patient: Patient, visit: Visit) -> Visit:
                         state.get("follow_up_reason"))
     if level == RiskLevel.red:
         _raise_escalation(db, patient, visit)
+    else:
+        _note_improvement(db, patient, visit)
 
     db.flush()
     return visit
@@ -177,10 +179,32 @@ def _schedule_follow_up(
     )
 
 
+def _open_escalation(db: Session, patient_id: str) -> Escalation | None:
+    return db.scalars(
+        select(Escalation)
+        .where(Escalation.patient_id == patient_id, Escalation.resolved.is_(False))
+        .order_by(Escalation.raised_at.desc())
+    ).first()
+
+
 def _raise_escalation(db: Session, patient: Patient, visit: Visit) -> None:
     reason = visit.risk_rationale or "High risk classification"
     if visit.danger_signs:
         reason = f"{reason} Danger signs: {', '.join(visit.danger_signs[:4])}."
+
+    # One open escalation per patient. A worker recording three red visits
+    # during a deteriorating week should sharpen the supervisor's single alert,
+    # not bury it under duplicates of itself.
+    existing = _open_escalation(db, patient.id)
+    if existing is not None:
+        existing.visit_id = visit.id
+        existing.worker_id = visit.worker_id
+        existing.raised_at = datetime.now(timezone.utc)
+        existing.reason = reason[:900]
+        log.info("Existing escalation for patient %s updated by visit %s",
+                 patient.id, visit.id)
+        return
+
     db.add(
         Escalation(
             patient_id=patient.id,
@@ -190,6 +214,22 @@ def _raise_escalation(db: Session, patient: Patient, visit: Visit) -> None:
         )
     )
     log.info("Escalation raised for patient %s from visit %s", patient.id, visit.id)
+
+
+def _note_improvement(db: Session, patient: Patient, visit: Visit) -> None:
+    """A later visit that is no longer red is recorded on the open escalation.
+
+    The escalation is deliberately NOT auto-resolved: a red event still needs a
+    human to acknowledge it. But the supervisor should be able to see that the
+    patient has since improved, instead of chasing a case that has moved on.
+    """
+    existing = _open_escalation(db, patient.id)
+    if existing is None:
+        return
+    existing.resolution_note = (
+        f"Later visit on {visit.visited_at.date().isoformat()} classified "
+        f"{visit.risk_level.value}: {visit.summary or 'no summary'}"
+    )[:900]
 
 
 def next_due_date(db: Session, patient_id: str) -> date | None:
