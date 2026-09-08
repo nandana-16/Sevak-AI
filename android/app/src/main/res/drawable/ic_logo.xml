@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The app mark, as a standalone logo.
+
+  Same shield-and-cross as the launcher icon, but self-contained: it carries
+  its own green ground rather than relying on the adaptive-icon background
+  layer, and the shield is scaled up because the launcher artwork is inset to
+  survive circular masking - proportions that look cramped when the mark is
+  shown on its own.
+
+  The colours are fixed rather than themed. A logo that changes colour between
+  light and dark mode is not a logo.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Rounded-square ground, matching the launcher background colour. -->
+    <path
+        android:fillColor="#1B7A43"
+        android:pathData="M26,0 L82,0 A26,26 0 0 1 108,26 L108,82 A26,26 0 0 1 82,108
+                          L26,108 A26,26 0 0 1 0,82 L0,26 A26,26 0 0 1 26,0 Z" />
+
+    <group
+        android:pivotX="54"
+        android:pivotY="54"
+        android:scaleX="1.32"
+        android:scaleY="1.32">
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M54,28 L76,36 L76,54 C76,66 67,75 54,80 C41,75 32,66 32,54 L32,36 Z" />
+        <path
+            android:fillColor="#1B7A43"
+            android:pathData="M50,42 h8 v8 h8 v8 h-8 v8 h-8 v-8 h-8 v-8 h8 Z" />
+    </group>
+</vector>

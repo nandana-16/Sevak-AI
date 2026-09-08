@@ -1,5 +1,6 @@
 package `in`.sevakai.app.ui.login
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -31,6 +32,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -40,6 +42,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import `in`.sevakai.app.R
 import `in`.sevakai.app.data.Repository
 import `in`.sevakai.app.ui.components.Notice
 import `in`.sevakai.app.ui.components.NoticeTone
@@ -64,20 +67,13 @@ fun LoginScreen(
     ) {
         Spacer(Modifier.height(80.dp))
 
-        Box(
-            Modifier
-                .size(64.dp)
-                .clip(RoundedCornerShape(18.dp))
-                .background(MaterialTheme.colorScheme.primary),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                "S",
-                style = MaterialTheme.typography.headlineLarge,
-                color = MaterialTheme.colorScheme.onPrimary,
-                fontWeight = FontWeight.Bold,
-            )
-        }
+        Image(
+            painter = painterResource(R.drawable.ic_logo),
+            contentDescription = null,   // "SevakAI" is spelled out just below
+            modifier = Modifier
+                .size(72.dp)
+                .clip(RoundedCornerShape(20.dp)),
+        )
 
         Spacer(Modifier.height(20.dp))
         Text("SevakAI", style = MaterialTheme.typography.headlineLarge)
