@@ -15,6 +15,7 @@ import `in`.sevakai.app.ui.plan.PlanScreen
 import `in`.sevakai.app.ui.queue.QueueScreen
 import `in`.sevakai.app.ui.register.RegisterScreen
 import `in`.sevakai.app.ui.roster.RosterScreen
+import `in`.sevakai.app.ui.settings.ServerSettingsScreen
 import `in`.sevakai.app.ui.visit.VisitResultScreen
 import `in`.sevakai.app.ui.visit.VisitScreen
 
@@ -24,6 +25,7 @@ object Routes {
     const val PLAN = "plan"
     const val QUEUE = "queue"
     const val REGISTER = "register"
+    const val SERVER = "server"
     const val PATIENT = "patient/{patientId}"
     const val VISIT = "visit/{patientId}"
     const val VISIT_RESULT = "visitResult/{visitId}"
@@ -56,7 +58,17 @@ fun SevakNavHost(
         startDestination = if (signedIn) Routes.ROSTER else Routes.LOGIN,
     ) {
         composable(Routes.LOGIN) {
-            LoginScreen(repository = repository)
+            LoginScreen(
+                repository = repository,
+                onOpenServerSettings = { navController.navigate(Routes.SERVER) },
+            )
+        }
+
+        composable(Routes.SERVER) {
+            ServerSettingsScreen(
+                repository = repository,
+                onBack = { navController.popBackStack() },
+            )
         }
 
         composable(Routes.ROSTER) {
@@ -66,6 +78,7 @@ fun SevakNavHost(
                 onOpenPlan = { navController.navigate(Routes.PLAN) },
                 onOpenQueue = { navController.navigate(Routes.QUEUE) },
                 onRegister = { navController.navigate(Routes.REGISTER) },
+                onOpenServerSettings = { navController.navigate(Routes.SERVER) },
             )
         }
 

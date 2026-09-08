@@ -4,6 +4,7 @@ import android.app.Application
 import android.content.Context
 import `in`.sevakai.app.data.Repository
 import `in`.sevakai.app.data.SessionStore
+import `in`.sevakai.app.data.SettingsStore
 import `in`.sevakai.app.data.remote.ApiClient
 import `in`.sevakai.app.sync.SyncWorker
 
@@ -34,7 +35,9 @@ class SevakApp : Application() {
             repo ?: run {
                 val app = context.applicationContext
                 val session = SessionStore(app)
-                Repository(app, ApiClient.create(session), session).also { repo = it }
+                val settings = SettingsStore(app)
+                Repository(app, ApiClient.create(session, settings), session, settings)
+                    .also { repo = it }
             }
         }
     }

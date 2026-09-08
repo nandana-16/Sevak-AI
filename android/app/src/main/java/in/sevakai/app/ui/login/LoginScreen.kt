@@ -23,6 +23,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -44,7 +45,10 @@ import `in`.sevakai.app.ui.components.Notice
 import `in`.sevakai.app.ui.components.NoticeTone
 
 @Composable
-fun LoginScreen(repository: Repository) {
+fun LoginScreen(
+    repository: Repository,
+    onOpenServerSettings: () -> Unit,
+) {
     val viewModel: LoginViewModel = viewModel(factory = LoginViewModel.factory(repository))
     val state by viewModel.state.collectAsStateWithLifecycle()
     val keyboard = LocalSoftwareKeyboardController.current
@@ -153,13 +157,25 @@ fun LoginScreen(repository: Repository) {
             }
         }
 
-        Spacer(Modifier.height(32.dp))
+        Spacer(Modifier.height(28.dp))
         Text(
             "Demo sign-in\n9000000002  ·  PIN 1234",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
         )
-        Spacer(Modifier.height(40.dp))
+
+        Spacer(Modifier.height(16.dp))
+        // If the server address is wrong, signing in is the thing that fails -
+        // so the fix has to be reachable from this screen, not from behind a
+        // successful login.
+        TextButton(onClick = onOpenServerSettings) {
+            Text(
+                "Server: ${state.serverLabel}",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.primary,
+            )
+        }
+        Spacer(Modifier.height(32.dp))
     }
 }

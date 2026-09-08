@@ -2,9 +2,11 @@ package `in`.sevakai.app.data.remote
 
 import `in`.sevakai.app.BuildConfig
 import `in`.sevakai.app.data.SessionStore
+import `in`.sevakai.app.data.SettingsStore
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.Interceptor
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -24,7 +26,26 @@ object ApiClient {
         encodeDefaults = true
     }
 
-    fun create(session: SessionStore): ApiService {
+    fun create(session: SessionStore, settings: SettingsStore): ApiService {
+        // Retrofit needs a base URL at construction time, but the real
+        // destination is a runtime setting - the same APK runs against an
+        // emulator, a USB-tethered phone and a laptop on the LAN. So the base
+        // URL below is only a placeholder, and this interceptor rewrites the
+        // scheme, host and port of every request from the stored setting.
+        val rewriteHost = Interceptor { chain ->
+            val configured = runBlocking { settings.current() }.toHttpUrlOrNull()
+            var request = chain.request()
+            if (configured != null) {
+                val url = request.url.newBuilder()
+                    .scheme(configured.scheme)
+                    .host(configured.host)
+                    .port(configured.port)
+                    .build()
+                request = request.newBuilder().url(url).build()
+            }
+            chain.proceed(request)
+        }
+
         val auth = Interceptor { chain ->
             val token = runBlocking { session.token() }
             val request = chain.request().newBuilder().apply {
@@ -43,6 +64,7 @@ object ApiClient {
         }
 
         val client = OkHttpClient.Builder()
+            .addInterceptor(rewriteHost)
             .addInterceptor(auth)
             // The pipeline runs three LLM calls, so a visit legitimately takes
             // several seconds. A short read timeout would abandon work the

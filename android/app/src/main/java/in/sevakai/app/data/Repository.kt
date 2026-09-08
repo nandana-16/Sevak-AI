@@ -43,6 +43,7 @@ class Repository(
     private val context: Context,
     val api: ApiService,
     val session: SessionStore,
+    val settings: SettingsStore,
 ) {
     private val db = AppDatabase.get(context)
     private val patientDao = db.patients()

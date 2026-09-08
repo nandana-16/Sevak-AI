@@ -76,17 +76,56 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 Needs JDK 17+ and the Android SDK. `local.properties` must point at your SDK
 (use forward slashes — `sdk.dir=C:/Users/you/AppData/Local/Android/Sdk`).
 
-**On the emulator** the app reaches the backend at `10.0.2.2:8010`, which is
-already the default. Use a *Google Play* system image — plain AOSP images have
-no speech recogniser.
+### Choosing the server address
 
-**On a physical phone**, plug it in and run:
+The backend address is a **runtime setting**, not a compile-time constant, so
+one APK works everywhere. Set it on the phone: **sign-in screen → "Server"**,
+which also has a *Test connection* button that reports what is actually wrong
+rather than just failing.
+
+| Where the app runs | Address | Why |
+|---|---|---|
+| Emulator | `10.0.2.2:8010` (default) | QEMU maps this to the host's loopback |
+| Phone over USB | `127.0.0.1:8010` | via `adb reverse` |
+| Phone on the same Wi-Fi | `<laptop IP>:8010` | e.g. `192.168.1.7:8010` |
+
+> **`10.0.2.2` is emulator-only.** It is not a real address and does not
+> resolve on a physical phone — where it fails as an ordinary-looking
+> connection timeout, which is an expensive thing to debug. The Server screen
+> detects this case and says so explicitly.
+
+### On the emulator
+
+Use a **Google Play** system image — plain AOSP images ship no speech
+recogniser, so the mic button will report that recognition is unavailable.
+
+### On a physical phone
+
+```bash
+bash scripts/run-on-phone.sh
+```
+
+That checks the device is connected and authorised, verifies the backend is up
+(and warns if the LLM or guideline index is missing), sets up `adb reverse`,
+builds, installs and launches. Then pick the **USB cable** preset on the Server
+screen.
+
+Doing it by hand is three commands:
 
 ```bash
 adb reverse tcp:8010 tcp:8010
+cd android && ./gradlew :app:assembleDebug
+adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
-The same `10.0.2.2` address keeps working, with no config change.
+`adb reverse` does **not** survive unplugging the phone — re-run it after any
+disconnect.
+
+**Speech on a real device**: Hindi recognition needs the language pack. If the
+mic reports that recognition is unavailable, install it under
+*Settings → System → Languages & input → On-device recognition*. Everything
+remains usable by typing without it, and the "Record audio for later" button
+captures raw audio that the server transcribes with Whisper regardless.
 
 ### Demo sign-in
 

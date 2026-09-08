@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  DEBUG BUILDS ONLY.
+
+  The server address is a runtime setting, so a developer may point the app at
+  an emulator (10.0.2.2), a USB-tethered laptop (127.0.0.1), or any private LAN
+  address. Android's network security config cannot express "any private
+  range", and an unlisted host fails as a silent connection error that looks
+  exactly like the server being down - which is a genuinely expensive thing to
+  debug in the field.
+
+  So debug builds permit cleartext generally. The release config in
+  src/main/res/xml/ keeps HTTPS enforced, so shipping this cannot accidentally
+  downgrade a real deployment.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>

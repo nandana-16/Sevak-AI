@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import `in`.sevakai.app.data.Repository
+import `in`.sevakai.app.data.SettingsStore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -17,12 +18,21 @@ class LoginViewModel(private val repository: Repository) : ViewModel() {
         val pin: String = "",
         val loading: Boolean = false,
         val error: String? = null,
+        val serverLabel: String = "",
     ) {
         val canSubmit: Boolean get() = phone.length >= 10 && pin.length >= 4
     }
 
     private val _state = MutableStateFlow(State())
     val state: StateFlow<State> = _state.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            repository.settings.serverUrl.collect { url ->
+                _state.value = _state.value.copy(serverLabel = SettingsStore.describe(url))
+            }
+        }
+    }
 
     fun onPhoneChange(value: String) {
         _state.value = _state.value.copy(
@@ -54,11 +64,14 @@ class LoginViewModel(private val repository: Repository) : ViewModel() {
     }
 
     private fun describe(error: Throwable): String = when {
-        error is IOException ->
-            "Cannot reach the server. Check that the backend is running and " +
-                "that you are on the same network."
         error.message?.contains("401") == true ->
             "Incorrect phone number or PIN."
+        error is IOException ->
+            // Name the address that failed. "Cannot reach the server" sends
+            // people hunting through the backend; the address usually IS the
+            // problem, especially the first time on a real phone.
+            "Cannot reach ${_state.value.serverLabel}. Tap \"Server\" below to " +
+                "check the address, or test the connection."
         else -> "Could not sign in. ${error.message.orEmpty()}".trim()
     }
 

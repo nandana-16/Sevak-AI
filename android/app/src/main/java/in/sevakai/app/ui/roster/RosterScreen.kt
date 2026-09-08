@@ -21,6 +21,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.CloudQueue
+import androidx.compose.material.icons.filled.Dns
 import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.PersonSearch
 import androidx.compose.material.icons.filled.Search
@@ -69,6 +70,7 @@ fun RosterScreen(
     onOpenPlan: () -> Unit,
     onOpenQueue: () -> Unit,
     onRegister: () -> Unit,
+    onOpenServerSettings: () -> Unit,
 ) {
     val viewModel: RosterViewModel = viewModel(factory = RosterViewModel.factory(repository))
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -136,6 +138,9 @@ fun RosterScreen(
                             )
                         }
                     }
+                }
+                IconButton(onClick = onOpenServerSettings) {
+                    Icon(Icons.Default.Dns, contentDescription = "Server settings")
                 }
                 IconButton(onClick = viewModel::signOut) {
                     Icon(Icons.Default.Logout, contentDescription = "Sign out")
