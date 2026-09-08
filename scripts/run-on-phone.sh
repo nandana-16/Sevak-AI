@@ -51,8 +51,14 @@ die()  { printf '  \033[31mfail\033[0m %s\n' "$*" >&2; exit 1; }
 
 # --- 1. Device -------------------------------------------------------------
 step "1. Looking for a connected phone"
-DEVICES="$("$ADB" devices | awk 'NR>1 && $2=="device" {print $1}')"
+ALL="$("$ADB" devices | awk 'NR>1 && $2=="device" {print $1}')"
 UNAUTH="$("$ADB" devices | awk 'NR>1 && $2=="unauthorized" {print $1}')"
+# Physical devices only. An emulator left running is the usual reason adb
+# answers "more than one device/emulator" and every later command fails.
+DEVICES="$(printf '%s
+' $ALL | grep -v '^emulator-' || true)"
+EMULATORS="$(printf '%s
+' $ALL | grep '^emulator-' || true)"
 
 if [ -n "$UNAUTH" ]; then
   die "Phone is connected but not authorised. Unlock it and accept the
@@ -65,19 +71,31 @@ if [ -z "$DEVICES" ]; then
        - USB debugging is enabled,
        - you accepted the authorisation prompt on the phone."
 fi
-for device in $DEVICES; do
-  MODEL="$("$ADB" -s "$device" shell getprop ro.product.model 2>/dev/null | tr -d '\r')"
-  SDK="$("$ADB" -s "$device" shell getprop ro.build.version.sdk 2>/dev/null | tr -d '\r')"
-  ok "$device — $MODEL (API $SDK)"
-  if [ -n "$SDK" ] && [ "$SDK" -lt 26 ] 2>/dev/null; then
-    die "This app needs Android 8.0 (API 26) or newer."
-  fi
-done
-DEVICE_COUNT="$(printf '%s\n' $DEVICES | wc -l | tr -d ' ')"
+SERIAL="${ANDROID_SERIAL:-$(printf '%s
+' $DEVICES | head -1)}"
+DEVICE_COUNT="$(printf '%s
+' $DEVICES | grep -c . || true)"
 if [ "$DEVICE_COUNT" -gt 1 ]; then
-  warn "More than one device attached; using the first. Unplug the others, or
-       set ANDROID_SERIAL to choose."
+  warn "Several phones attached; using $SERIAL. Set ANDROID_SERIAL to choose."
 fi
+if [ -n "$EMULATORS" ]; then
+  warn "An emulator is also running. Targeting the phone explicitly, so"
+  warn "this is fine - but note plain 'adb ...' commands will still fail"
+  warn "with 'more than one device/emulator' until you close it."
+fi
+
+MODEL="$("$ADB" -s "$SERIAL" shell getprop ro.product.model 2>/dev/null | tr -d '')"
+BRAND="$("$ADB" -s "$SERIAL" shell getprop ro.product.manufacturer 2>/dev/null | tr -d '')"
+SDK="$("$ADB" -s "$SERIAL" shell getprop ro.build.version.sdk 2>/dev/null | tr -d '')"
+REL="$("$ADB" -s "$SERIAL" shell getprop ro.build.version.release 2>/dev/null | tr -d '')"
+ok "$SERIAL - $BRAND $MODEL (Android $REL, API $SDK)"
+if [ -n "$SDK" ] && [ "$SDK" -lt 26 ] 2>/dev/null; then
+  die "This app needs Android 8.0 (API 26) or newer."
+fi
+
+# Every later adb call targets this serial, so a running emulator cannot
+# swallow the install or the port forward.
+ADB_T() { "$ADB" -s "$SERIAL" "$@"; }
 
 # --- 2. Backend ------------------------------------------------------------
 step "2. Checking the backend"
@@ -102,8 +120,8 @@ esac
 step "3. Forwarding port $PORT to the phone"
 # `adb reverse` makes the PHONE's 127.0.0.1:PORT reach the LAPTOP's port.
 # Note this is not 10.0.2.2 — that address is emulator-only.
-"$ADB" reverse --remove-all >/dev/null 2>&1 || true
-if "$ADB" reverse "tcp:$PORT" "tcp:$PORT" >/dev/null 2>&1; then
+ADB_T reverse --remove-all >/dev/null 2>&1 || true
+if ADB_T reverse "tcp:$PORT" "tcp:$PORT" >/dev/null 2>&1; then
   ok "phone can now reach the backend at 127.0.0.1:$PORT"
 else
   die "adb reverse failed. Some devices need USB mode set to 'File transfer'."
@@ -116,20 +134,29 @@ step "4. Building the app"
 [ -f "$APK" ] || die "APK not found at $APK"
 ok "built $(du -h "$APK" | cut -f1 | tr -d ' ')"
 
+# MSYS_NO_PATHCONV above keeps Git Bash from mangling device-side arguments
+# such as the `pkg/.Activity` component name - but it also stops it converting
+# HOST paths, and adb.exe is a Windows binary that cannot stat "/c/Users/...".
+# So convert this one path back explicitly.
+APK_HOST="$APK"
+if command -v cygpath >/dev/null 2>&1; then
+  APK_HOST="$(cygpath -w "$APK")"
+fi
+
 step "5. Installing"
-INSTALL="$("$ADB" install -r "$APK" 2>&1)"
+INSTALL="$(ADB_T install -r "$APK_HOST" 2>&1)"
 case "$INSTALL" in
   *Success*) ok "installed" ;;
   *INSTALL_FAILED_UPDATE_INCOMPATIBLE*)
     warn "A different build is installed; removing it first"
-    "$ADB" uninstall in.sevakai.app >/dev/null 2>&1
-    "$ADB" install -r "$APK" >/dev/null 2>&1 && ok "installed" || die "$INSTALL" ;;
+    ADB_T uninstall in.sevakai.app >/dev/null 2>&1
+    ADB_T install -r "$APK_HOST" >/dev/null 2>&1 && ok "installed" || die "$INSTALL" ;;
   *) die "$INSTALL" ;;
 esac
 
 # --- 6. Launch -------------------------------------------------------------
 step "6. Launching"
-"$ADB" shell am start -n in.sevakai.app/.MainActivity >/dev/null 2>&1 \
+ADB_T shell am start -n in.sevakai.app/.MainActivity >/dev/null 2>&1 \
   && ok "launched" || die "Could not start the app"
 
 cat <<EOF
@@ -147,5 +174,5 @@ If you unplug the phone, run this again (or just \`adb reverse tcp:$PORT tcp:$PO
 To use Wi-Fi instead of USB, put your laptop's IP in the Server screen and make
 sure the backend was started with --host 0.0.0.0.
 
-Logs:  $ADB logcat -s SevakRepo:* SevakSpeech:* SevakSync:* AndroidRuntime:E
+Logs:  "$ADB" -s $SERIAL logcat -s SevakRepo:* SevakSpeech:* SevakSync:* AndroidRuntime:E
 EOF
