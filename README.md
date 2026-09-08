@@ -127,6 +127,18 @@ mic reports that recognition is unavailable, install it under
 remains usable by typing without it, and the "Record audio for later" button
 captures raw audio that the server transcribes with Whisper regardless.
 
+### Running a demo
+
+```bash
+cd backend && ./venv/Scripts/python.exe -m scripts.demo_reset
+```
+
+Puts the database into a known, rehearsable state with three named patients,
+and is safe to re-run between rehearsals.
+**→ [docs/DEMO.md](docs/DEMO.md)** is a scene-by-scene ~8 minute runbook: what
+to tap, what to say, what can break, and what to answer when someone challenges
+the Aadhaar design.
+
 ### Demo sign-in
 
 | Phone | PIN | Role |
