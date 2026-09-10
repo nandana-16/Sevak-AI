@@ -14,6 +14,8 @@ import `in`.sevakai.app.data.remote.VisitDetailDto
 import `in`.sevakai.app.speech.AudioRecorder
 import `in`.sevakai.app.speech.SpeechController
 import `in`.sevakai.app.sync.SyncWorker
+import `in`.sevakai.app.ui.i18n.Strings
+import `in`.sevakai.app.ui.i18n.stringsFor
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -24,28 +26,29 @@ import kotlinx.coroutines.launch
  *  the payload and the validation cannot drift apart. */
 data class VitalField(
     val key: String,
-    val label: String,
+    /** Resolved against the current language. Units are not translated. */
+    val label: (Strings) -> String,
     val suffix: String,
     val min: Double,
     val max: Double,
 ) {
-    fun validate(raw: String): String? {
+    fun validate(raw: String, strings: Strings): String? {
         if (raw.isBlank()) return null
-        val value = raw.toDoubleOrNull() ?: return "Enter a number"
-        if (value < min || value > max) return "Expected $min–$max"
+        val value = raw.toDoubleOrNull() ?: return strings.enterANumber
+        if (value < min || value > max) return strings.expectedRange(min, max)
         return null
     }
 }
 
 val VITAL_FIELDS = listOf(
-    VitalField("temperature_c", "Temperature", "°C", 30.0, 45.0),
-    VitalField("bp_systolic", "BP systolic", "mmHg", 50.0, 260.0),
-    VitalField("bp_diastolic", "BP diastolic", "mmHg", 30.0, 180.0),
-    VitalField("pulse", "Pulse", "/min", 30.0, 220.0),
-    VitalField("weight_kg", "Weight", "kg", 0.5, 200.0),
-    VitalField("hb", "Haemoglobin", "g/dL", 2.0, 20.0),
-    VitalField("spo2", "SpO₂", "%", 50.0, 100.0),
-    VitalField("muac_cm", "MUAC", "cm", 5.0, 30.0),
+    VitalField("temperature_c", { it.vitalTemperature }, "°C", 30.0, 45.0),
+    VitalField("bp_systolic", { it.vitalBpSystolic }, "mmHg", 50.0, 260.0),
+    VitalField("bp_diastolic", { it.vitalBpDiastolic }, "mmHg", 30.0, 180.0),
+    VitalField("pulse", { it.vitalPulse }, "/min", 30.0, 220.0),
+    VitalField("weight_kg", { it.vitalWeight }, "kg", 0.5, 200.0),
+    VitalField("hb", { it.vitalHaemoglobin }, "g/dL", 2.0, 20.0),
+    VitalField("spo2", { it.vitalSpo2 }, "%", 50.0, 100.0),
+    VitalField("muac_cm", { it.vitalMuac }, "cm", 5.0, 30.0),
 )
 
 class VisitViewModel(
@@ -87,6 +90,8 @@ class VisitViewModel(
     private val _state = MutableStateFlow(State())
     val state: StateFlow<State> = _state.asStateFlow()
 
+    private val strings: Strings get() = stringsFor(_state.value.language)
+
     init {
         _state.value = _state.value.copy(speechAvailable = speech.isAvailable())
 
@@ -95,7 +100,7 @@ class VisitViewModel(
                 .onSuccess { _state.value = _state.value.copy(patient = it.patient) }
         }
         viewModelScope.launch {
-            repository.session.language.collect {
+            repository.settings.language.collect {
                 _state.value = _state.value.copy(language = it)
             }
         }
@@ -129,7 +134,7 @@ class VisitViewModel(
 
     fun setLanguage(code: String) {
         _state.value = _state.value.copy(language = code)
-        viewModelScope.launch { repository.session.setLanguage(code) }
+        viewModelScope.launch { repository.settings.setLanguage(code) }
     }
 
     // --- Voice --------------------------------------------------------------
@@ -137,7 +142,7 @@ class VisitViewModel(
     fun startListening() {
         val tag = if (_state.value.language == "en") "en-IN" else "hi-IN"
         speech.setText(_state.value.transcript)
-        speech.start(tag)
+        speech.start(tag, strings)
     }
 
     fun stopListening() = speech.stop()
@@ -150,7 +155,7 @@ class VisitViewModel(
 
     /** Offline capture: record raw audio, transcribe on the server later. */
     fun startRecording() {
-        if (recorder.start()) {
+        if (recorder.start(strings)) {
             viewModelScope.launch {
                 while (_state.value.recordingAudio) {
                     recorder.tick()
@@ -174,7 +179,7 @@ class VisitViewModel(
         val cleaned = value.filter { it.isDigit() || it == '.' }
         val field = VITAL_FIELDS.first { it.key == key }
         val errors = _state.value.vitalErrors.toMutableMap()
-        field.validate(cleaned)?.let { errors[key] = it } ?: errors.remove(key)
+        field.validate(cleaned, strings)?.let { errors[key] = it } ?: errors.remove(key)
         _state.value = _state.value.copy(
             vitals = _state.value.vitals + (key to cleaned),
             vitalErrors = errors,
@@ -187,7 +192,7 @@ class VisitViewModel(
         val current = _state.value
         if (current.submitting || !current.hasContent) return
         if (current.vitalErrors.isNotEmpty()) {
-            _state.value = current.copy(error = "Please correct the highlighted measurements.")
+            _state.value = current.copy(error = strings.correctMeasurements)
             return
         }
 
@@ -230,8 +235,7 @@ class VisitViewModel(
                         SyncWorker.syncNow(getApplication())
                         _state.value = _state.value.copy(
                             submitting = false,
-                            queuedMessage = "Saved on this phone. It will be sent " +
-                                "automatically when you have a network.",
+                            queuedMessage = strings.queuedMessage,
                         )
                     }
                 }
@@ -240,7 +244,7 @@ class VisitViewModel(
             } catch (e: Exception) {
                 _state.value = _state.value.copy(
                     submitting = false,
-                    error = e.message ?: "Could not save the visit",
+                    error = e.message ?: strings.couldNotSaveVisit,
                 )
             }
         }

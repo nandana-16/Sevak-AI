@@ -7,11 +7,14 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import `in`.sevakai.app.sync.SyncWorker
 import `in`.sevakai.app.ui.SevakNavHost
+import `in`.sevakai.app.ui.i18n.LocalStrings
+import `in`.sevakai.app.ui.i18n.stringsFor
 import `in`.sevakai.app.ui.theme.SevakTheme
 import kotlinx.coroutines.flow.map
 
@@ -29,14 +32,22 @@ class MainActivity : ComponentActivity() {
                     .map { it != null }
                     .collectAsState(initial = null)
 
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background,
-                ) {
-                    // `null` means we have not read the store yet; rendering
-                    // the login screen during that gap makes an already
-                    // signed-in worker flash a sign-in form on every launch.
-                    signedIn?.let { SevakNavHost(repository = repository, signedIn = it) }
+                // The whole tree reads its text from here. Switching language
+                // just recomposes - no activity recreation, so an in-progress
+                // visit (and an unsent recording) survives the change.
+                val language by repository.settings.language
+                    .collectAsState(initial = "hi")
+
+                CompositionLocalProvider(LocalStrings provides stringsFor(language)) {
+                    Surface(
+                        modifier = Modifier.fillMaxSize(),
+                        color = MaterialTheme.colorScheme.background,
+                    ) {
+                        // `null` means we have not read the store yet; rendering
+                        // the login screen during that gap makes an already
+                        // signed-in worker flash a sign-in form on every launch.
+                        signedIn?.let { SevakNavHost(repository = repository, signedIn = it) }
+                    }
                 }
             }
         }

@@ -3,9 +3,12 @@ package `in`.sevakai.app.ui.patient
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import `in`.sevakai.app.data.NoOfflineCopyException
 import `in`.sevakai.app.data.Repository
 import `in`.sevakai.app.data.remote.PatientDetailDto
 import `in`.sevakai.app.data.remote.UnauthorizedException
+import `in`.sevakai.app.ui.i18n.Strings
+import `in`.sevakai.app.ui.i18n.stringsFor
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -26,7 +29,13 @@ class PatientViewModel(
     private val _state = MutableStateFlow(State())
     val state: StateFlow<State> = _state.asStateFlow()
 
+    private var language: String = "hi"
+    private val strings: Strings get() = stringsFor(language)
+
     init {
+        viewModelScope.launch {
+            repository.settings.language.collect { language = it }
+        }
         load()
     }
 
@@ -45,7 +54,10 @@ class PatientViewModel(
             } catch (e: Exception) {
                 _state.value = _state.value.copy(
                     loading = false,
-                    error = e.message ?: "Could not open this profile",
+                    error = when (e) {
+                        is NoOfflineCopyException -> strings.noOfflineCopy
+                        else -> e.message ?: strings.couldNotOpenProfile
+                    },
                 )
             }
         }

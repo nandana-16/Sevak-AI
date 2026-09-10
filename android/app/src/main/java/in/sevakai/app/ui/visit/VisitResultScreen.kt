@@ -48,6 +48,7 @@ import `in`.sevakai.app.ui.components.NoticeTone
 import `in`.sevakai.app.ui.components.Risk
 import `in`.sevakai.app.ui.components.SectionCard
 import `in`.sevakai.app.ui.components.SectionLabel
+import `in`.sevakai.app.ui.i18n.LocalStrings
 import `in`.sevakai.app.ui.components.color
 import `in`.sevakai.app.ui.components.label
 import `in`.sevakai.app.ui.components.tint
@@ -61,6 +62,7 @@ fun VisitResultScreen(
     var visit by remember { mutableStateOf<VisitDetailDto?>(null) }
     var loading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
+    val strings = LocalStrings.current
 
     LaunchedEffect(visitId) {
         repository.visit(visitId)
@@ -76,15 +78,15 @@ fun VisitResultScreen(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 IconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = strings.back)
                 }
-                Text("Visit result", style = MaterialTheme.typography.titleMedium)
+                Text(strings.visitResult, style = MaterialTheme.typography.titleMedium)
             }
             when {
                 loading -> LoadingBlock()
                 visit == null -> EmptyState(
-                    title = "Could not load this visit",
-                    body = error ?: "Try again when you have a connection.",
+                    title = strings.couldNotLoadVisit,
+                    body = error ?: strings.couldNotLoadVisitBody,
                 )
                 else -> VisitResultBody(visit = visit!!, onDone = null)
             }
@@ -106,6 +108,7 @@ fun VisitResultBody(
     onDone: (() -> Unit)?,
 ) {
     val risk = Risk.from(visit.riskLevel)
+    val strings = LocalStrings.current
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -152,8 +155,7 @@ fun VisitResultBody(
         if (visit.degradedSteps.isNotEmpty()) {
             item {
                 Notice(
-                    "Part of this was worked out by fixed rules, not the AI model " +
-                        "(${visit.degradedSteps.joinToString("; ")}). Please review it yourself.",
+                    strings.degradedWarning(visit.degradedSteps.joinToString("; ")),
                     tone = NoticeTone.WARNING,
                 )
             }
@@ -162,7 +164,7 @@ fun VisitResultBody(
         if (visit.status == "failed") {
             item {
                 Notice(
-                    visit.errorMessage ?: "This visit could not be analysed automatically.",
+                    visit.errorMessage ?: strings.visitFailed,
                     tone = NoticeTone.WARNING,
                 )
             }
@@ -172,7 +174,7 @@ fun VisitResultBody(
         if (visit.dangerSigns.isNotEmpty()) {
             item {
                 SectionCard(accent = risk.color()) {
-                    SectionLabel("Danger signs found")
+                    SectionLabel(strings.dangerSignsFound)
                     Spacer(Modifier.height(10.dp))
                     visit.dangerSigns.forEach { sign ->
                         Row(
@@ -198,7 +200,7 @@ fun VisitResultBody(
         if (visit.actions.isNotEmpty()) {
             item {
                 SectionCard {
-                    SectionLabel("What to do now")
+                    SectionLabel(strings.whatToDoNow)
                     Spacer(Modifier.height(12.dp))
                     visit.actions.forEachIndexed { index, action ->
                         Row(Modifier.padding(vertical = 6.dp), verticalAlignment = Alignment.Top) {
@@ -234,7 +236,7 @@ fun VisitResultBody(
         if (visit.nextVisitDue != null) {
             item {
                 SectionCard(accent = MaterialTheme.colorScheme.primary) {
-                    SectionLabel("Next visit")
+                    SectionLabel(strings.nextVisit)
                     Spacer(Modifier.height(6.dp))
                     Text(
                         visit.nextVisitDue!!,
@@ -243,7 +245,7 @@ fun VisitResultBody(
                     )
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        "Added to your visit plan automatically.",
+                        strings.nextVisitAuto,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -254,15 +256,15 @@ fun VisitResultBody(
         // --- What was recorded ----------------------------------------------
         item {
             SectionCard {
-                SectionLabel("Recorded in this visit")
+                SectionLabel(strings.recordedInThisVisit)
                 Spacer(Modifier.height(10.dp))
                 val vitals = buildList {
-                    visit.temperatureC?.let { add("Temperature" to "$it °C") }
+                    visit.temperatureC?.let { add(strings.vitalTemperature to "$it °C") }
                     visit.bpSystolic?.let { add("BP" to "$it/${visit.bpDiastolic ?: "-"}") }
-                    visit.pulse?.let { add("Pulse" to "$it /min") }
-                    visit.hb?.let { add("Haemoglobin" to "$it g/dL") }
+                    visit.pulse?.let { add(strings.vitalPulse to "$it /min") }
+                    visit.hb?.let { add("Hb" to "$it g/dL") }
                     visit.spo2?.let { add("SpO₂" to "$it %") }
-                    visit.weightKg?.let { add("Weight" to "$it kg") }
+                    visit.weightKg?.let { add(strings.vitalWeight to "$it kg") }
                 }
                 if (visit.symptoms.isNotEmpty()) {
                     Text(
@@ -290,7 +292,7 @@ fun VisitResultBody(
                 }
                 if (visit.symptoms.isEmpty() && vitals.isEmpty()) {
                     Text(
-                        "No specific findings were picked up.",
+                        strings.noFindings,
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -308,12 +310,10 @@ fun VisitResultBody(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Column(Modifier.weight(1f)) {
-                            SectionLabel("Based on NHM guidelines")
+                            SectionLabel(strings.basedOnGuidelines)
                             Spacer(Modifier.height(4.dp))
                             Text(
-                                "${visit.citations.size} passage${
-                                    if (visit.citations.size == 1) "" else "s"
-                                } from official documents",
+                                strings.passagesCount(visit.citations.size),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -322,7 +322,7 @@ fun VisitResultBody(
                             Icon(
                                 if (expanded) Icons.Default.ExpandLess
                                 else Icons.Default.ExpandMore,
-                                contentDescription = if (expanded) "Hide" else "Show",
+                                contentDescription = if (expanded) strings.hide else strings.show,
                             )
                         }
                     }
@@ -331,7 +331,7 @@ fun VisitResultBody(
                         visit.citations.forEach { citation ->
                             Column(Modifier.padding(vertical = 8.dp)) {
                                 Text(
-                                    "${citation.title} · page ${citation.page}",
+                                    "${citation.title} · ${strings.pageLabel(citation.page)}",
                                     style = MaterialTheme.typography.labelMedium,
                                     color = MaterialTheme.colorScheme.primary,
                                 )
@@ -356,7 +356,7 @@ fun VisitResultBody(
                     shape = MaterialTheme.shapes.small,
                     modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
                 ) {
-                    Text("Done", style = MaterialTheme.typography.labelLarge)
+                    Text(strings.done, style = MaterialTheme.typography.labelLarge)
                 }
                 Spacer(Modifier.height(24.dp))
             }
@@ -364,11 +364,14 @@ fun VisitResultBody(
     }
 }
 
-private fun urgencyLabel(urgency: String): String = when (urgency) {
-    "now" -> "Right now"
-    "today" -> "Today"
-    "this_week" -> "This week"
-    else -> "Routine"
+@Composable
+private fun urgencyLabel(urgency: String): String = with(LocalStrings.current) {
+    when (urgency) {
+        "now" -> urgencyNow
+        "today" -> urgencyToday
+        "this_week" -> urgencyThisWeek
+        else -> urgencyRoutine
+    }
 }
 
 @Composable

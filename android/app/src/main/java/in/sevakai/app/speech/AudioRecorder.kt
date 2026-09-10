@@ -4,6 +4,8 @@ import android.content.Context
 import android.media.MediaRecorder
 import android.os.Build
 import android.util.Log
+import `in`.sevakai.app.ui.i18n.EnglishStrings
+import `in`.sevakai.app.ui.i18n.Strings
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import java.io.File
@@ -37,11 +39,13 @@ class AudioRecorder(private val context: Context) {
     private var recorder: MediaRecorder? = null
     private var outputFile: File? = null
     private var startedAt: Long = 0
+    private var strings: Strings = EnglishStrings
 
     private fun queueDir(): File =
         File(context.filesDir, "visit_audio").apply { mkdirs() }
 
-    fun start(): Boolean {
+    fun start(strings: Strings): Boolean {
+        this.strings = strings
         stop()
         return try {
             val stamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
@@ -72,7 +76,7 @@ class AudioRecorder(private val context: Context) {
             true
         } catch (e: Exception) {
             Log.e(TAG, "Could not start recording", e)
-            _state.value = State(error = "Could not start recording: ${e.message}")
+            _state.value = State(error = strings.couldNotStartRecording(e.message.orEmpty()))
             false
         }
     }
@@ -104,7 +108,7 @@ class AudioRecorder(private val context: Context) {
             Log.w(TAG, "Recording too short or invalid: ${e.message}")
             runCatching { active.release() }
             outputFile?.delete()
-            _state.value = State(error = "That recording was too short. Please hold the button longer.")
+            _state.value = State(error = strings.recordingTooShort)
             null
         }
     }

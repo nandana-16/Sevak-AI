@@ -43,6 +43,7 @@ import `in`.sevakai.app.ui.components.NoticeTone
 import `in`.sevakai.app.ui.components.Risk
 import `in`.sevakai.app.ui.components.RiskChip
 import `in`.sevakai.app.ui.components.SectionCard
+import `in`.sevakai.app.ui.i18n.LocalStrings
 import `in`.sevakai.app.ui.components.color
 
 @Composable
@@ -53,6 +54,7 @@ fun PlanScreen(
 ) {
     val viewModel: PlanViewModel = viewModel(factory = PlanViewModel.factory(repository))
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val strings = LocalStrings.current
 
     Scaffold(containerColor = MaterialTheme.colorScheme.background) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
@@ -61,12 +63,12 @@ fun PlanScreen(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 IconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = strings.back)
                 }
                 Column(Modifier.weight(1f)) {
-                    Text("Visit plan", style = MaterialTheme.typography.titleMedium)
+                    Text(strings.visitPlanTitle, style = MaterialTheme.typography.titleMedium)
                     Text(
-                        "Scheduled from each visit's risk level",
+                        strings.visitPlanSubtitle,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -77,16 +79,16 @@ fun PlanScreen(
                 Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                FilterPill("Due now", state.days == 0, { viewModel.setRange(0) })
-                FilterPill("Next 7 days", state.days == 7, { viewModel.setRange(7) })
-                FilterPill("Next 30 days", state.days == 30, { viewModel.setRange(30) })
+                FilterPill(strings.rangeDueNow, state.days == 0, { viewModel.setRange(0) })
+                FilterPill(strings.rangeNext7, state.days == 7, { viewModel.setRange(7) })
+                FilterPill(strings.rangeNext30, state.days == 30, { viewModel.setRange(30) })
             }
 
             when {
-                state.loading && state.items.isEmpty() -> LoadingBlock("Loading your plan…")
+                state.loading && state.items.isEmpty() -> LoadingBlock(strings.loadingPlan)
                 state.items.isEmpty() -> EmptyState(
-                    title = "Nothing scheduled",
-                    body = "Follow-ups appear here automatically after you record a visit.",
+                    title = strings.nothingScheduled,
+                    body = strings.nothingScheduledBody,
                     icon = Icons.Default.EventAvailable,
                 )
                 else -> {
@@ -99,7 +101,7 @@ fun PlanScreen(
                         if (state.fromCache) {
                             item {
                                 Notice(
-                                    "Offline — showing your last saved plan.",
+                                    strings.planOffline,
                                     tone = NoticeTone.OFFLINE,
                                 )
                             }
@@ -107,7 +109,7 @@ fun PlanScreen(
                         if (overdue.isNotEmpty()) {
                             item {
                                 Text(
-                                    "Overdue (${overdue.size})",
+                                    strings.overdueHeading(overdue.size),
                                     style = MaterialTheme.typography.titleSmall,
                                     color = Risk.RED.color(),
                                 )
@@ -119,7 +121,7 @@ fun PlanScreen(
                         if (rest.isNotEmpty()) {
                             item {
                                 Spacer(Modifier.height(4.dp))
-                                Text("Upcoming", style = MaterialTheme.typography.titleSmall)
+                                Text(strings.upcoming, style = MaterialTheme.typography.titleSmall)
                             }
                             items(rest, key = { it.id }) {
                                 PlanCard(it, onOpenPatient, viewModel::snooze)
@@ -139,6 +141,7 @@ private fun PlanCard(
     onSnooze: (String) -> Unit,
 ) {
     val risk = Risk.from(row.priority)
+    val strings = LocalStrings.current
     SectionCard(
         onClick = { onOpen(row.patientId) },
         accent = if (row.overdue || risk == Risk.RED) risk.color() else null,
@@ -148,7 +151,7 @@ private fun PlanCard(
                 Text(row.patientName, style = MaterialTheme.typography.titleMedium)
                 Spacer(Modifier.height(2.dp))
                 Text(
-                    listOfNotNull(row.village, "Due ${row.dueDate}").joinToString(" · "),
+                    listOfNotNull(row.village, strings.dueOnDate(row.dueDate)).joinToString(" · "),
                     style = MaterialTheme.typography.bodySmall,
                     color = if (row.overdue) risk.color()
                     else MaterialTheme.colorScheme.onSurfaceVariant,
@@ -168,7 +171,7 @@ private fun PlanCard(
         if (risk != Risk.RED) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                 TextButton(onClick = { onSnooze(row.id) }) {
-                    Text("Nobody home — push 1 day",
+                    Text(strings.snoozeOneDay,
                         style = MaterialTheme.typography.labelMedium)
                 }
             }

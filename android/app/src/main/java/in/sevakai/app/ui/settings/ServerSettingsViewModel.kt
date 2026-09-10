@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import `in`.sevakai.app.data.ConnectionCheck
 import `in`.sevakai.app.data.Repository
 import `in`.sevakai.app.data.SettingsStore
+import `in`.sevakai.app.ui.i18n.stringsFor
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -33,11 +34,16 @@ class ServerSettingsViewModel(
     private val _state = MutableStateFlow(State())
     val state: StateFlow<State> = _state.asStateFlow()
 
+    private var language: String = "hi"
+
     init {
         viewModelScope.launch {
             _state.value = _state.value.copy(
                 input = SettingsStore.describe(repository.settings.current())
             )
+        }
+        viewModelScope.launch {
+            repository.settings.language.collect { language = it }
         }
     }
 
@@ -63,7 +69,7 @@ class ServerSettingsViewModel(
         val target = _state.value.resolved
         _state.value = _state.value.copy(testing = true, result = null, saved = false)
         viewModelScope.launch {
-            val result = ConnectionCheck.run(context, target)
+            val result = ConnectionCheck.run(context, target, stringsFor(language))
             _state.value = _state.value.copy(testing = false, result = result)
             // A working address is worth keeping without a second tap.
             if (result is ConnectionCheck.Result.Ok) {

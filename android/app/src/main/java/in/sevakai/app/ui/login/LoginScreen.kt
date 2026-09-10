@@ -1,8 +1,10 @@
 package `in`.sevakai.app.ui.login
 
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -12,8 +14,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -31,6 +35,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -46,6 +51,9 @@ import `in`.sevakai.app.R
 import `in`.sevakai.app.data.Repository
 import `in`.sevakai.app.ui.components.Notice
 import `in`.sevakai.app.ui.components.NoticeTone
+import `in`.sevakai.app.ui.i18n.EnglishStrings
+import `in`.sevakai.app.ui.i18n.HindiStrings
+import `in`.sevakai.app.ui.i18n.LocalStrings
 
 @Composable
 fun LoginScreen(
@@ -54,6 +62,7 @@ fun LoginScreen(
 ) {
     val viewModel: LoginViewModel = viewModel(factory = LoginViewModel.factory(repository))
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val strings = LocalStrings.current
     val keyboard = LocalSoftwareKeyboardController.current
     val scroll = rememberScrollState()
 
@@ -76,20 +85,44 @@ fun LoginScreen(
         )
 
         Spacer(Modifier.height(20.dp))
-        Text("SevakAI", style = MaterialTheme.typography.headlineLarge)
+        Text(strings.appName, style = MaterialTheme.typography.headlineLarge)
         Spacer(Modifier.height(6.dp))
         Text(
-            "For ASHA workers",
+            strings.appTagline,
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
 
-        Spacer(Modifier.height(44.dp))
+        Spacer(Modifier.height(32.dp))
+
+        // Language first, before anything else on the screen. A worker who
+        // cannot read English should not have to parse an English form to
+        // find the switch that fixes that.
+        Text(
+            strings.chooseLanguage,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(10.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            LanguageChoice(
+                label = HindiStrings.languageName,
+                selected = state.language == "hi",
+                onClick = { viewModel.setLanguage("hi") },
+            )
+            LanguageChoice(
+                label = EnglishStrings.languageName,
+                selected = state.language == "en",
+                onClick = { viewModel.setLanguage("en") },
+            )
+        }
+
+        Spacer(Modifier.height(32.dp))
 
         OutlinedTextField(
             value = state.phone,
             onValueChange = viewModel::onPhoneChange,
-            label = { Text("Phone number") },
+            label = { Text(strings.phoneNumber) },
             singleLine = true,
             shape = MaterialTheme.shapes.small,
             textStyle = MaterialTheme.typography.bodyLarge,
@@ -105,7 +138,7 @@ fun LoginScreen(
         OutlinedTextField(
             value = state.pin,
             onValueChange = viewModel::onPinChange,
-            label = { Text("4-digit PIN") },
+            label = { Text(strings.pin) },
             singleLine = true,
             shape = MaterialTheme.shapes.small,
             textStyle = MaterialTheme.typography.bodyLarge,
@@ -149,13 +182,13 @@ fun LoginScreen(
                     color = MaterialTheme.colorScheme.onPrimary,
                 )
             } else {
-                Text("Sign in", style = MaterialTheme.typography.labelLarge)
+                Text(strings.signIn, style = MaterialTheme.typography.labelLarge)
             }
         }
 
         Spacer(Modifier.height(28.dp))
         Text(
-            "Demo sign-in\n9000000002  ·  PIN 1234",
+            strings.demoSignIn,
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
@@ -167,11 +200,45 @@ fun LoginScreen(
         // successful login.
         TextButton(onClick = onOpenServerSettings) {
             Text(
-                "Server: ${state.serverLabel}",
+                strings.serverLabel(state.serverLabel),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.primary,
             )
         }
         Spacer(Modifier.height(32.dp))
+    }
+}
+
+/** A large, high-contrast language chip. Bigger than a normal filter pill
+ *  because this is the first choice on the first screen, and the person
+ *  making it may not read the language currently on display. */
+@Composable
+private fun LanguageChoice(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    Box(
+        Modifier
+            .clip(CircleShape)
+            .background(
+                if (selected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent
+            )
+            .border(
+                width = if (selected) 0.dp else 1.dp,
+                color = if (selected) Color.Transparent else MaterialTheme.colorScheme.outline,
+                shape = CircleShape,
+            )
+            .clickable(onClick = onClick)
+            .padding(horizontal = 28.dp, vertical = 12.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            label,
+            style = MaterialTheme.typography.titleMedium,
+            color = if (selected) MaterialTheme.colorScheme.primary
+            else MaterialTheme.colorScheme.onSurfaceVariant,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+        )
     }
 }

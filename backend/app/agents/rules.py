@@ -41,13 +41,23 @@ class RuleFinding:
 class RuleResult:
     level: RiskLevel = RiskLevel.green
     findings: list[RuleFinding] = field(default_factory=list)
+    # These strings are shown to the worker beside the model's own output, so
+    # they have to be in her language too - an English danger sign inside a
+    # Hindi result reads as a bug.
+    language: str = "en"
+
+    @property
+    def hindi(self) -> bool:
+        return self.language.startswith("hi")
 
     @property
     def danger_signs(self) -> list[str]:
         return [f.reason for f in self.findings if f.level == RiskLevel.red]
 
-    def add(self, level: RiskLevel, reason: str, source: str) -> None:
-        self.findings.append(RuleFinding(level, reason, source))
+    def add(self, level: RiskLevel, reason: str, source: str,
+            reason_hi: str | None = None) -> None:
+        label = reason_hi if (self.hindi and reason_hi) else reason
+        self.findings.append(RuleFinding(level, label, source))
         self.level = escalate(self.level, level)
 
 
@@ -87,6 +97,29 @@ NEWBORN_DANGER_SIGNS: dict[str, list[str]] = {
 }
 
 
+# Hindi labels for the sign names above. Keyed by the English label so the
+# matching vocabulary and the display text cannot drift apart.
+SIGN_HI: dict[str, str] = {
+    "convulsions / fits": "झटके / दौरे",
+    "unconscious or unresponsive": "बेहोश या कोई जवाब नहीं",
+    "unable to drink or feed": "पी या खा नहीं पा रहा",
+    "vomiting everything": "सब कुछ उल्टी कर रहा है",
+    "lethargic or very drowsy": "बहुत सुस्ती या नींद जैसा",
+    "vaginal bleeding in pregnancy": "गर्भावस्था में खून आना",
+    "severe headache with blurred vision": "तेज़ सर दर्द के साथ धुंधला दिखना",
+    "convulsions (possible eclampsia)": "झटके (एक्लेम्प्सिया हो सकता है)",
+    "reduced or absent fetal movement": "बच्चे का हिलना कम या बंद",
+    "severe abdominal pain": "पेट में तेज़ दर्द",
+    "leaking of fluid": "पानी निकलना",
+    "severe chest indrawing": "पसली का अंदर धँसना",
+    "grunting or nasal flaring": "कराहना या नाक फूलना",
+    "cold to touch / hypothermia": "छूने पर ठंडा",
+    "umbilical redness or pus": "नाभि के पास लाली या मवाद",
+    "yellow palms and soles (severe jaundice)": "हथेली और तलवे पीले (तेज़ पीलिया)",
+    "no movement or moves only when stimulated": "हिलता नहीं, छेड़ने पर ही हिलता है",
+}
+
+
 def _matches(haystack: str, needles: list[str]) -> bool:
     return any(needle in haystack for needle in needles)
 
@@ -99,6 +132,7 @@ def _searchable(transcript: str | None, symptoms: list | None, notes: str | None
 
 def evaluate(
     *,
+    language: str | None = "en",
     category: PatientCategory,
     age_years: float | None,
     transcript: str | None = None,
@@ -112,7 +146,7 @@ def evaluate(
     spo2: int | None = None,
     muac_cm: float | None = None,
 ) -> RuleResult:
-    result = RuleResult()
+    result = RuleResult(language=(language or "en"))
     text = _searchable(transcript, symptoms, typed_notes)
 
     is_infant = category in (PatientCategory.infant,) or (age_years is not None and age_years < 1)
@@ -122,17 +156,20 @@ def evaluate(
     # --- General danger signs (IMNCI) --------------------------------------
     for sign, needles in GENERAL_DANGER_SIGNS.items():
         if _matches(text, needles):
-            result.add(RiskLevel.red, sign, "IMNCI general danger signs")
+            result.add(RiskLevel.red, sign, "IMNCI general danger signs",
+                       SIGN_HI.get(sign))
 
     if is_maternal:
         for sign, needles in MATERNAL_DANGER_SIGNS.items():
             if _matches(text, needles):
-                result.add(RiskLevel.red, sign, "PMSMA maternal warning signs")
+                result.add(RiskLevel.red, sign, "PMSMA maternal warning signs",
+                           SIGN_HI.get(sign))
 
     if is_infant:
         for sign, needles in NEWBORN_DANGER_SIGNS.items():
             if _matches(text, needles):
-                result.add(RiskLevel.red, sign, "HBNC / IMNCI newborn danger signs")
+                result.add(RiskLevel.red, sign, "HBNC / IMNCI newborn danger signs",
+                           SIGN_HI.get(sign))
 
     # --- Blood pressure -----------------------------------------------------
     if bp_systolic and bp_diastolic:
@@ -143,12 +180,14 @@ def evaluate(
                     RiskLevel.red,
                     f"Severe hypertension in pregnancy ({bp_systolic}/{bp_diastolic})",
                     "PMSMA high-risk conditions",
+                    f"गर्भावस्था में बहुत ज़्यादा BP ({bp_systolic}/{bp_diastolic})",
                 )
             elif bp_systolic >= 140 or bp_diastolic >= 90:
                 result.add(
                     RiskLevel.yellow,
                     f"Raised blood pressure in pregnancy ({bp_systolic}/{bp_diastolic})",
                     "PMSMA high-risk conditions",
+                    f"गर्भावस्था में BP बढ़ा हुआ ({bp_systolic}/{bp_diastolic})",
                 )
         else:
             if bp_systolic >= 180 or bp_diastolic >= 120:
@@ -156,12 +195,14 @@ def evaluate(
                     RiskLevel.red,
                     f"Hypertensive crisis ({bp_systolic}/{bp_diastolic})",
                     "Standard treatment guidelines",
+                    f"BP ख़तरनाक स्तर पर ({bp_systolic}/{bp_diastolic})",
                 )
             elif bp_systolic >= 140 or bp_diastolic >= 90:
                 result.add(
                     RiskLevel.yellow,
                     f"Raised blood pressure ({bp_systolic}/{bp_diastolic})",
                     "Standard treatment guidelines",
+                    f"BP बढ़ा हुआ ({bp_systolic}/{bp_diastolic})",
                 )
 
     # --- Haemoglobin (Anemia Mukt Bharat) -----------------------------------
@@ -171,15 +212,18 @@ def evaluate(
                 RiskLevel.red,
                 f"Severe anaemia (Hb {hb} g/dL) - needs facility referral",
                 "Anemia Mukt Bharat",
+                f"बहुत ज़्यादा खून की कमी (Hb {hb} g/dL) - केंद्र भेजना ज़रूरी",
             )
         elif hb < 11 and (is_maternal or is_child):
             result.add(
                 RiskLevel.yellow,
                 f"Anaemia (Hb {hb} g/dL)",
                 "Anemia Mukt Bharat",
+                f"खून की कमी (Hb {hb} g/dL)",
             )
         elif hb < 12:
-            result.add(RiskLevel.yellow, f"Low haemoglobin (Hb {hb} g/dL)", "Anemia Mukt Bharat")
+            result.add(RiskLevel.yellow, f"Low haemoglobin (Hb {hb} g/dL)",
+                       "Anemia Mukt Bharat", f"Hb कम है (Hb {hb} g/dL)")
 
     # --- Temperature --------------------------------------------------------
     if temperature_c is not None:
@@ -188,35 +232,44 @@ def evaluate(
                 RiskLevel.red,
                 f"Abnormal temperature in young infant ({temperature_c} C)",
                 "IMNCI young infant",
+                f"छोटे शिशु का तापमान असामान्य ({temperature_c} C)",
             )
         elif temperature_c >= 39.0:
-            result.add(RiskLevel.red, f"High fever ({temperature_c} C)", "IMNCI fever")
+            result.add(RiskLevel.red, f"High fever ({temperature_c} C)", "IMNCI fever",
+                       f"तेज़ बुख़ार ({temperature_c} C)")
         elif temperature_c >= 38.0:
-            result.add(RiskLevel.yellow, f"Fever ({temperature_c} C)", "IMNCI fever")
+            result.add(RiskLevel.yellow, f"Fever ({temperature_c} C)", "IMNCI fever",
+                       f"बुख़ार ({temperature_c} C)")
 
     # --- Oxygen saturation --------------------------------------------------
     if spo2 is not None:
         if spo2 < 90:
-            result.add(RiskLevel.red, f"Low oxygen saturation ({spo2}%)", "Standard treatment guidelines")
+            result.add(RiskLevel.red, f"Low oxygen saturation ({spo2}%)",
+                       "Standard treatment guidelines", f"SpO2 बहुत कम ({spo2}%)")
         elif spo2 < 94:
-            result.add(RiskLevel.yellow, f"Borderline oxygen saturation ({spo2}%)", "Standard treatment guidelines")
+            result.add(RiskLevel.yellow, f"Borderline oxygen saturation ({spo2}%)",
+                       "Standard treatment guidelines", f"SpO2 थोड़ा कम ({spo2}%)")
 
     # --- MUAC (severe acute malnutrition) -----------------------------------
     if muac_cm is not None and is_child:
         if muac_cm < 11.5:
-            result.add(RiskLevel.red, f"Severe acute malnutrition (MUAC {muac_cm} cm)", "IMNCI malnutrition")
+            result.add(RiskLevel.red, f"Severe acute malnutrition (MUAC {muac_cm} cm)",
+                       "IMNCI malnutrition", f"गंभीर कुपोषण (MUAC {muac_cm} cm)")
         elif muac_cm < 12.5:
-            result.add(RiskLevel.yellow, f"Moderate acute malnutrition (MUAC {muac_cm} cm)", "IMNCI malnutrition")
+            result.add(RiskLevel.yellow, f"Moderate acute malnutrition (MUAC {muac_cm} cm)",
+                       "IMNCI malnutrition", f"मध्यम कुपोषण (MUAC {muac_cm} cm)")
 
     # --- Pulse --------------------------------------------------------------
     if pulse is not None and not is_infant:
         if pulse > 120 or pulse < 50:
-            result.add(RiskLevel.yellow, f"Abnormal pulse ({pulse}/min)", "Standard treatment guidelines")
+            result.add(RiskLevel.yellow, f"Abnormal pulse ({pulse}/min)",
+                       "Standard treatment guidelines", f"नाड़ी असामान्य ({pulse}/मिनट)")
 
     # --- Fever duration mentioned in speech ---------------------------------
     duration = re.search(r"(\d+)\s*(?:din|days?)\b", text)
     mentions_fever = "fever" in text or "bukhar" in text
     if duration and mentions_fever and int(duration.group(1)) >= 7:
-        result.add(RiskLevel.yellow, "Fever lasting a week or more", "IMNCI fever")
+        result.add(RiskLevel.yellow, "Fever lasting a week or more", "IMNCI fever",
+                   "एक हफ़्ते या ज़्यादा से बुख़ार")
 
     return result

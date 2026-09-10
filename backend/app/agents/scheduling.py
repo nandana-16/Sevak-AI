@@ -47,6 +47,30 @@ def _routine_interval(state: PipelineState) -> int:
 
 
 def _fallback_actions(state: PipelineState, level: RiskLevel) -> list[dict]:
+    if (state.get("language") or "en").startswith("hi"):
+        if level == RiskLevel.red:
+            return [
+                {"action": "मरीज़ को आज ही नज़दीकी स्वास्थ्य केंद्र ले जाएँ",
+                 "urgency": "now"},
+                {"action": "गाड़ी का इंतज़ाम करें और परिवार को बताएँ क्या साथ ले जाना है",
+                 "urgency": "now"},
+                {"action": "रेफ़रल दर्ज करें और शाम को हाल पूछें",
+                 "urgency": "today"},
+            ]
+        if level == RiskLevel.yellow:
+            return [
+                {"action": "अगले कुछ दिनों में डॉक्टर या ANM को दिखाने की सलाह दें",
+                 "urgency": "this_week"},
+                {"action": "ख़तरे के वे लक्षण बताएँ जिन पर तुरंत केंद्र जाना है",
+                 "urgency": "today"},
+                {"action": "अगले दौरे पर असामान्य माप दोबारा जाँचें",
+                 "urgency": "this_week"},
+            ]
+        return [
+            {"action": "खान-पान, आराम और सफ़ाई पर सामान्य सलाह जारी रखें",
+             "urgency": "routine"},
+            {"action": "परिवार के साथ अगले दौरे का समय तय करें", "urgency": "routine"},
+        ]
     if level == RiskLevel.red:
         return [
             {"action": "Accompany the patient to the nearest health facility today",
@@ -85,6 +109,14 @@ def _clamp_follow_up(level: RiskLevel, proposed, state: PipelineState) -> int:
 
 def _fallback_summary(state: PipelineState, level: RiskLevel) -> str:
     symptoms = state.get("symptoms") or []
+    if (state.get("language") or "en").startswith("hi"):
+        lead = ", ".join(symptoms[:3]) if symptoms else "कोई नई शिकायत नहीं"
+        label = {
+            RiskLevel.red: "तुरंत रेफ़र किया",
+            RiskLevel.yellow: "डॉक्टर को दिखाना है",
+            RiskLevel.green: "स्थिर",
+        }.get(level, "देखा गया")
+        return f"दौरे में दर्ज: {lead}; {label}."
     lead = ", ".join(symptoms[:3]) if symptoms else "no new complaints"
     label = {
         RiskLevel.red: "referred urgently",
@@ -109,6 +141,7 @@ def run(state: PipelineState, usage: LLMUsage) -> PipelineState:
             state.get("findings_text", ""),
             level.value,
             state.get("risk_rationale", ""),
+            state.get("language"),
         ),
         usage,
         max_tokens=2400,
@@ -118,7 +151,11 @@ def run(state: PipelineState, usage: LLMUsage) -> PipelineState:
     if result.degraded:
         actions = _fallback_actions(state, level)
         follow_up = _clamp_follow_up(level, None, state)
-        follow_up_reason = state.get("risk_rationale") or "Routine follow-up"
+        follow_up_reason = state.get("risk_rationale") or (
+            "सामान्य अगला दौरा"
+            if (state.get("language") or "en").startswith("hi")
+            else "Routine follow-up"
+        )
         summary = _fallback_summary(state, level)
         refer = level == RiskLevel.red
         referral_reason = state.get("risk_rationale") if refer else None

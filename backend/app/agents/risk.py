@@ -87,6 +87,7 @@ def run(state: PipelineState, usage: LLMUsage) -> PipelineState:
 
     # 2. Deterministic rules.
     rule_result = rules.evaluate(
+        language=state.get("language"),
         category=state.get("category", PatientCategory.adult),
         age_years=state.get("age_years"),
         transcript=state.get("transcript"),
@@ -112,6 +113,7 @@ def run(state: PipelineState, usage: LLMUsage) -> PipelineState:
             state.get("findings_text", ""),
             _format_excerpts(citations),
             _format_rule_flags(rule_result),
+            state.get("language"),
         ),
         usage,
         max_tokens=3200,
@@ -121,17 +123,20 @@ def run(state: PipelineState, usage: LLMUsage) -> PipelineState:
 
     if result.degraded:
         level = rule_result.level
-        rationale = _rule_rationale(rule_result)
+        rationale = _rule_rationale(rule_result, state.get("language"))
         confidence = 0.5
         danger_signs = rule_result.danger_signs
-        family_message = _family_message(level)
+        family_message = _family_message(level, state.get("language"))
         cited_indices: list[int] = []
     else:
         data = result.data
         level = _parse_level(data.get("risk_level"))
         if level == RiskLevel.unknown:
             level = rule_result.level
-        rationale = str(data.get("rationale") or "").strip() or _rule_rationale(rule_result)
+        rationale = (
+            str(data.get("rationale") or "").strip()
+            or _rule_rationale(rule_result, state.get("language"))
+        )
         try:
             confidence = min(max(float(data.get("confidence", 0.7)), 0.0), 1.0)
         except (TypeError, ValueError):
@@ -152,9 +157,12 @@ def run(state: PipelineState, usage: LLMUsage) -> PipelineState:
             level.value, final.value, state.get("visit_id"),
         )
         extra = "; ".join(rule_result.danger_signs) or rule_result.findings[0].reason
-        rationale = (
-            f"{rationale} Protocol check also flagged: {extra}."
-        ).strip()
+        note = (
+            f"नियम जाँच में यह भी मिला: {extra}."
+            if (state.get("language") or "en").startswith("hi")
+            else f"Protocol check also flagged: {extra}."
+        )
+        rationale = f"{rationale} {note}".strip()
     level = final
 
     # Merge rule danger signs in, without duplicating what the model said.
@@ -174,7 +182,9 @@ def run(state: PipelineState, usage: LLMUsage) -> PipelineState:
     state["risk_rationale"] = rationale
     state["risk_confidence"] = confidence
     state["danger_signs"] = danger_signs
-    state["family_message"] = family_message or _family_message(level)
+    state["family_message"] = family_message or _family_message(
+        level, state.get("language")
+    )
     return state
 
 
@@ -195,6 +205,12 @@ def _sign_key(text: str) -> frozenset[str]:
     lowered = re.sub(r"[^a-z ]+", " ", text.lower())
     lowered = lowered.replace("anaemia", "anemia").replace("oedema", "edema")
     words = {w for w in lowered.split() if len(w) > 2 and w not in _STOPWORDS}
+    if not words:
+        # Devanagari (or any non-Latin script) is stripped entirely by the
+        # rule above, which would leave an empty fingerprint - and an empty
+        # fingerprint was being discarded, silently emptying the danger-signs
+        # panel for every Hindi visit. Fall back to the raw words.
+        words = {w for w in re.split(r"[\s,;:()/]+", text.strip()) if len(w) > 1}
     return frozenset(words)
 
 
@@ -217,21 +233,46 @@ def _dedupe_signs(primary: list[str], extra: list[str]) -> list[str]:
     return kept
 
 
-def _rule_rationale(result: rules.RuleResult) -> str:
+def _rule_rationale(result: rules.RuleResult, language: str | None = "en") -> str:
+    hindi = (language or "en").startswith("hi")
     if not result.findings:
         return (
+            "जो दर्ज हुआ उसमें कोई ख़तरे का लक्षण या असामान्य माप नहीं मिला। "
+            "सामान्य कार्यक्रम जारी रखें।"
+        ) if hindi else (
             "No danger signs or abnormal readings were found in what was recorded. "
             "Continue the routine schedule."
         )
     reasons = "; ".join(f.reason for f in result.findings[:4])
     if result.level == RiskLevel.red:
-        return f"Danger signs found that need care today: {reasons}."
+        return (f"आज ही देखभाल ज़रूरी है, ये लक्षण मिले: {reasons}."
+                if hindi else
+                f"Danger signs found that need care today: {reasons}.")
     if result.level == RiskLevel.yellow:
-        return f"Findings that need a doctor's review soon: {reasons}."
-    return f"Minor findings noted: {reasons}."
+        return (f"जल्दी डॉक्टर को दिखाना चाहिए: {reasons}."
+                if hindi else
+                f"Findings that need a doctor's review soon: {reasons}.")
+    return (f"छोटी बातें दर्ज हुईं: {reasons}."
+            if hindi else
+            f"Minor findings noted: {reasons}.")
 
 
-def _family_message(level: RiskLevel) -> str:
+def _family_message(level: RiskLevel, language: str | None = "en") -> str:
+    if (language or "en").startswith("hi"):
+        return {
+            RiskLevel.red: (
+                "मरीज़ को आज ही स्वास्थ्य केंद्र ले जाएँ। लक्षण अपने आप ठीक "
+                "होने का इंतज़ार न करें।"
+            ),
+            RiskLevel.yellow: (
+                "अगले कुछ दिनों में डॉक्टर या ANM को दिखाएँ, और हालत बिगड़ने "
+                "पर तुरंत बताएँ।"
+            ),
+            RiskLevel.green: (
+                "अभी सब ठीक लग रहा है। सामान्य देखभाल जारी रखें, अगला दौरा "
+                "तय समय पर होगा।"
+            ),
+        }.get(level, "सामान्य सलाह मानें और कुछ बदले तो आशा को बताएँ।")
     return {
         RiskLevel.red: (
             "Take the patient to the health facility today. Do not wait for "

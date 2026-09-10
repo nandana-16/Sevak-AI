@@ -27,7 +27,6 @@ class SessionStore(private val context: Context) {
         val WORKER_ROLE = stringPreferencesKey("worker_role")
         val WORKER_VILLAGE = stringPreferencesKey("worker_village")
         val WORKER_PHONE = stringPreferencesKey("worker_phone")
-        val LANGUAGE = stringPreferencesKey("language")
         val ONBOARDED = booleanPreferencesKey("onboarded")
     }
 
@@ -52,7 +51,6 @@ class SessionStore(private val context: Context) {
         )
     }
 
-    val language: Flow<String> = context.dataStore.data.map { it[Keys.LANGUAGE] ?: "hi" }
 
     suspend fun token(): String? = context.dataStore.data.first()[Keys.TOKEN]
 
@@ -75,9 +73,6 @@ class SessionStore(private val context: Context) {
         }
     }
 
-    suspend fun setLanguage(code: String) {
-        context.dataStore.edit { it[Keys.LANGUAGE] = code }
-    }
 
     /**
      * Sign out. Note this clears credentials only - queued visits stay on the

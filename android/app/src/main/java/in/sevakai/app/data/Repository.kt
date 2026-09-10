@@ -143,8 +143,7 @@ class Repository(
             throw e
         } catch (e: Exception) {
             val cached = patientDao.byId(id)
-            val json = cached?.detailJson
-                ?: throw IOException("This profile has not been opened before, so there is no offline copy")
+            val json = cached?.detailJson ?: throw NoOfflineCopyException()
             PatientResult(ApiClient.json.decodeFromString(json), fromCache = true)
         }
     }
@@ -308,6 +307,11 @@ class Repository(
         private const val SYNCED_RETENTION_MS = 24 * 60 * 60 * 1000L
     }
 }
+
+/** Thrown when a profile was never opened online, so no local copy exists.
+ *  Carries no message: the wording belongs to the UI, in the worker's
+ *  language, not to the data layer. */
+class NoOfflineCopyException : IOException()
 
 sealed interface SubmitResult {
     data class Processed(val visit: VisitDetailDto) : SubmitResult

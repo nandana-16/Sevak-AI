@@ -8,6 +8,8 @@ import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.util.Log
+import `in`.sevakai.app.ui.i18n.EnglishStrings
+import `in`.sevakai.app.ui.i18n.Strings
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -41,15 +43,16 @@ class SpeechController(private val context: Context) {
     val state: StateFlow<State> = _state
 
     private var recognizer: SpeechRecognizer? = null
+    private var strings: Strings = EnglishStrings
 
     fun isAvailable(): Boolean = SpeechRecognizer.isRecognitionAvailable(context)
 
-    fun start(languageTag: String) {
+    fun start(languageTag: String, strings: Strings) {
+        this.strings = strings
         if (!isAvailable()) {
             _state.value = _state.value.copy(
                 available = false,
-                error = "Speech recognition is not available on this phone. " +
-                    "Please type the notes instead.",
+                error = strings.speechUnavailable,
             )
             return
         }
@@ -166,16 +169,15 @@ class SpeechController(private val context: Context) {
     }
 
     private fun describe(error: Int): String = when (error) {
-        SpeechRecognizer.ERROR_AUDIO -> "Could not read the microphone."
-        SpeechRecognizer.ERROR_CLIENT -> "Recognition stopped unexpectedly."
-        SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS ->
-            "Microphone permission is needed to record a visit."
+        SpeechRecognizer.ERROR_AUDIO -> strings.speechNoMic
+        SpeechRecognizer.ERROR_CLIENT -> strings.speechStopped
+        SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> strings.speechPermission
         SpeechRecognizer.ERROR_NETWORK, SpeechRecognizer.ERROR_NETWORK_TIMEOUT ->
-            "No network for speech recognition. Use \"Record for later\" instead."
-        SpeechRecognizer.ERROR_NO_MATCH -> "Nothing was recognised. Please try again."
-        SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> "The recogniser is busy. Try again."
-        SpeechRecognizer.ERROR_SERVER -> "The speech service returned an error."
-        SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> "No speech was heard."
-        else -> "Speech recognition failed."
+            strings.speechNoNetwork
+        SpeechRecognizer.ERROR_NO_MATCH -> strings.speechNoMatch
+        SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> strings.speechBusy
+        SpeechRecognizer.ERROR_SERVER -> strings.speechServerError
+        SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> strings.speechTimeout
+        else -> strings.speechFailed
     }
 }

@@ -51,17 +51,26 @@ import `in`.sevakai.app.ui.components.NoticeTone
 import `in`.sevakai.app.ui.components.Risk
 import `in`.sevakai.app.ui.components.RiskChip
 import `in`.sevakai.app.ui.components.SectionCard
+import `in`.sevakai.app.ui.i18n.LocalStrings
 import `in`.sevakai.app.ui.components.color
 import `in`.sevakai.app.ui.components.tint
 
-private val CATEGORIES = listOf(
-    "pregnant" to "Pregnant",
-    "infant" to "Infants",
-    "child" to "Children",
-    "postnatal" to "Postnatal",
-    "adult" to "Adults",
-    "elderly" to "Elderly",
+private val CATEGORY_KEYS = listOf(
+    "pregnant", "infant", "child", "postnatal", "adult", "elderly",
 )
+
+/** Category label in the current language. Shared with the profile screen. */
+@Composable
+fun categoryLabel(category: String): String = with(LocalStrings.current) {
+    when (category) {
+        "pregnant" -> categoryPregnant
+        "infant" -> categoryInfant
+        "child" -> categoryChild
+        "postnatal" -> categoryPostnatal
+        "elderly" -> categoryElderly
+        else -> categoryAdult
+    }
+}
 
 @Composable
 fun RosterScreen(
@@ -75,6 +84,7 @@ fun RosterScreen(
     val viewModel: RosterViewModel = viewModel(factory = RosterViewModel.factory(repository))
     val state by viewModel.state.collectAsStateWithLifecycle()
     val queued by viewModel.unsyncedCount.collectAsStateWithLifecycle()
+    val strings = LocalStrings.current
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -87,7 +97,7 @@ fun RosterScreen(
             ) {
                 Icon(Icons.Default.Add, contentDescription = null)
                 Spacer(Modifier.width(8.dp))
-                Text("Register", style = MaterialTheme.typography.labelLarge)
+                Text(strings.registerPatient, style = MaterialTheme.typography.labelLarge)
             }
         },
     ) { padding ->
@@ -102,7 +112,7 @@ fun RosterScreen(
             ) {
                 Column(Modifier.weight(1f)) {
                     Text(
-                        "My patients",
+                        strings.myPatients,
                         style = MaterialTheme.typography.headlineMedium,
                     )
                     Text(
@@ -115,11 +125,11 @@ fun RosterScreen(
                     )
                 }
                 IconButton(onClick = onOpenPlan) {
-                    Icon(Icons.Default.CalendarMonth, contentDescription = "Visit plan")
+                    Icon(Icons.Default.CalendarMonth, contentDescription = strings.visitPlan)
                 }
                 Box {
                     IconButton(onClick = onOpenQueue) {
-                        Icon(Icons.Default.CloudQueue, contentDescription = "Sync queue")
+                        Icon(Icons.Default.CloudQueue, contentDescription = strings.syncQueue)
                     }
                     if (queued > 0) {
                         Box(
@@ -140,10 +150,10 @@ fun RosterScreen(
                     }
                 }
                 IconButton(onClick = onOpenServerSettings) {
-                    Icon(Icons.Default.Dns, contentDescription = "Server settings")
+                    Icon(Icons.Default.Dns, contentDescription = strings.serverSettings)
                 }
                 IconButton(onClick = viewModel::signOut) {
-                    Icon(Icons.Default.Logout, contentDescription = "Sign out")
+                    Icon(Icons.Default.Logout, contentDescription = strings.signOut)
                 }
             }
 
@@ -151,7 +161,7 @@ fun RosterScreen(
             OutlinedTextField(
                 value = state.filters.search,
                 onValueChange = viewModel::onSearchChange,
-                placeholder = { Text("Search by name or village") },
+                placeholder = { Text(strings.searchHint) },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                 singleLine = true,
                 shape = MaterialTheme.shapes.small,
@@ -169,14 +179,14 @@ fun RosterScreen(
             ) {
                 item {
                     FilterPill(
-                        text = "Due now",
+                        text = strings.filterDueNow,
                         selected = state.filters.dueOnly,
                         onClick = viewModel::toggleDueOnly,
                     )
                 }
                 item {
                     FilterPill(
-                        text = "High risk",
+                        text = strings.filterHighRisk,
                         selected = state.filters.risk == "red",
                         onClick = { viewModel.toggleRisk("red") },
                         accent = Risk.RED.color(),
@@ -184,15 +194,15 @@ fun RosterScreen(
                 }
                 item {
                     FilterPill(
-                        text = "Watch",
+                        text = strings.filterWatch,
                         selected = state.filters.risk == "yellow",
                         onClick = { viewModel.toggleRisk("yellow") },
                         accent = Risk.AMBER.color(),
                     )
                 }
-                items(CATEGORIES) { (key, label) ->
+                items(CATEGORY_KEYS) { key ->
                     FilterPill(
-                        text = label,
+                        text = categoryLabel(key),
                         selected = state.filters.category == key,
                         onClick = { viewModel.toggleCategory(key) },
                     )
@@ -211,14 +221,13 @@ fun RosterScreen(
             // --- Content -----------------------------------------------------
             when {
                 state.loading && state.patients.isEmpty() ->
-                    LoadingBlock("Loading your patients…")
+                    LoadingBlock(strings.loadingPatients)
 
                 state.patients.isEmpty() -> EmptyState(
                     title = if (state.filters.activeCount > 0 || state.filters.search.isNotBlank())
-                        "No matching patients" else "No patients assigned yet",
+                        strings.noMatchingPatients else strings.noPatientsYet,
                     body = if (state.filters.activeCount > 0 || state.filters.search.isNotBlank())
-                        "Try clearing the filters or searching a different name."
-                    else "Patients assigned to you by your ANM will appear here.",
+                        strings.noMatchingPatientsBody else strings.noPatientsYetBody,
                     icon = Icons.Default.PersonSearch,
                 )
 
@@ -231,14 +240,14 @@ fun RosterScreen(
                     if (state.fromCache) {
                         item {
                             Notice(
-                                "You are offline. Showing the last saved copy of your roster.",
+                                strings.rosterOffline,
                                 tone = NoticeTone.OFFLINE,
                             )
                         }
                     }
                     item {
                         Text(
-                            "${state.patients.size} patient${if (state.patients.size == 1) "" else "s"}",
+                            strings.patientCount(state.patients.size),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -255,6 +264,7 @@ fun RosterScreen(
 @Composable
 private fun PatientCard(patient: PatientRow, onClick: () -> Unit) {
     val risk = Risk.from(patient.risk)
+    val strings = LocalStrings.current
     SectionCard(
         onClick = onClick,
         // A red patient gets a coloured edge, so the list can be scanned for
@@ -289,7 +299,7 @@ private fun PatientCard(patient: PatientRow, onClick: () -> Unit) {
                     .padding(10.dp)
             ) {
                 Text(
-                    "Last visit: ${patient.lastVisitSummary}",
+                    strings.lastVisitPrefix(patient.lastVisitSummary!!),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -299,7 +309,7 @@ private fun PatientCard(patient: PatientRow, onClick: () -> Unit) {
         if (patient.nextVisitDue != null) {
             Spacer(Modifier.height(8.dp))
             Text(
-                "Next visit due ${patient.nextVisitDue}",
+                strings.nextVisitDue(patient.nextVisitDue!!),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.primary,
                 fontWeight = FontWeight.Medium,
@@ -308,11 +318,4 @@ private fun PatientCard(patient: PatientRow, onClick: () -> Unit) {
     }
 }
 
-internal fun categoryLabel(category: String): String = when (category) {
-    "pregnant" -> "Pregnant"
-    "infant" -> "Infant"
-    "child" -> "Child"
-    "postnatal" -> "Postnatal"
-    "elderly" -> "Elderly"
-    else -> "Adult"
-}
+

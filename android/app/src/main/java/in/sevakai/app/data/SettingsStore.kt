@@ -29,6 +29,24 @@ class SettingsStore(private val context: Context) {
 
     private object Keys {
         val SERVER_URL = stringPreferencesKey("server_url")
+        val LANGUAGE = stringPreferencesKey("language")
+    }
+
+    /**
+     * The worker's language, driving both the interface and the speech
+     * recogniser. Lives here rather than with the session because it is a
+     * property of the person using the phone, not of being signed in - signing
+     * out must not silently put the interface back into English.
+     *
+     * Hindi is the default: this app is for ASHA workers, and defaulting to
+     * English would make the majority of them change it every time.
+     */
+    val language: Flow<String> = context.settingsDataStore.data.map {
+        it[Keys.LANGUAGE] ?: "hi"
+    }
+
+    suspend fun setLanguage(code: String) {
+        context.settingsDataStore.edit { it[Keys.LANGUAGE] = code }
     }
 
     val serverUrl: Flow<String> = context.settingsDataStore.data.map {

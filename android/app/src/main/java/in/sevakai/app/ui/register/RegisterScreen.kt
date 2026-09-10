@@ -48,15 +48,12 @@ import `in`.sevakai.app.ui.components.Notice
 import `in`.sevakai.app.ui.components.NoticeTone
 import `in`.sevakai.app.ui.components.SectionCard
 import `in`.sevakai.app.ui.components.SectionLabel
+import `in`.sevakai.app.ui.i18n.LocalStrings
+import `in`.sevakai.app.ui.roster.categoryLabel
 import `in`.sevakai.app.ui.theme.LocalRiskPalette
 
-private val CATEGORIES = listOf(
-    "pregnant" to "Pregnant",
-    "infant" to "Infant",
-    "child" to "Child",
-    "postnatal" to "Postnatal",
-    "adult" to "Adult",
-    "elderly" to "Elderly",
+private val CATEGORY_KEYS = listOf(
+    "pregnant", "infant", "child", "postnatal", "adult", "elderly",
 )
 
 @Composable
@@ -67,6 +64,7 @@ fun RegisterScreen(
 ) {
     val viewModel: RegisterViewModel = viewModel(factory = RegisterViewModel.factory(repository))
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val strings = LocalStrings.current
 
     LaunchedEffect(state.createdId) {
         state.createdId?.let(onRegistered)
@@ -85,9 +83,9 @@ fun RegisterScreen(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 IconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = strings.back)
                 }
-                Text("Register patient", style = MaterialTheme.typography.titleMedium)
+                Text(strings.registerPatient, style = MaterialTheme.typography.titleMedium)
             }
 
             Column(Modifier.padding(horizontal = 20.dp)) {
@@ -95,12 +93,10 @@ fun RegisterScreen(
 
                 // --- Aadhaar ------------------------------------------------
                 SectionCard {
-                    SectionLabel("Aadhaar verification")
+                    SectionLabel(strings.sectionAadhaar)
                     Spacer(Modifier.height(6.dp))
                     Text(
-                        "The number is checked for validity on this phone. Only the " +
-                            "last 4 digits and a one-way code are stored — never the " +
-                            "full number.",
+                        strings.aadhaarExplainer,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -108,8 +104,8 @@ fun RegisterScreen(
                     OutlinedTextField(
                         value = state.aadhaarDisplay,
                         onValueChange = viewModel::onAadhaarChange,
-                        label = { Text("Aadhaar number") },
-                        placeholder = { Text("XXXX XXXX XXXX") },
+                        label = { Text(strings.aadhaarNumber) },
+                        placeholder = { Text(strings.aadhaarPlaceholder) },
                         singleLine = true,
                         shape = MaterialTheme.shapes.small,
                         textStyle = MaterialTheme.typography.bodyLarge,
@@ -122,7 +118,7 @@ fun RegisterScreen(
                             } else if (state.aadhaarValid) {
                                 Icon(
                                     Icons.Default.CheckCircle,
-                                    contentDescription = "Valid",
+                                    contentDescription = strings.connected,
                                     tint = MaterialTheme.colorScheme.primary,
                                 )
                             }
@@ -145,7 +141,7 @@ fun RegisterScreen(
                         )
                         Spacer(Modifier.width(4.dp))
                         Text(
-                            "The patient has agreed to link their Aadhaar",
+                            strings.aadhaarConsent,
                             style = MaterialTheme.typography.bodyMedium,
                             modifier = Modifier.clickable { viewModel.onConsentChange(!state.consent) },
                         )
@@ -156,19 +152,23 @@ fun RegisterScreen(
 
                 // --- Identity -----------------------------------------------
                 SectionCard {
-                    SectionLabel("Patient details")
+                    SectionLabel(strings.sectionPatientDetails)
                     Spacer(Modifier.height(12.dp))
                     OutlinedTextField(
                         value = state.name,
                         onValueChange = viewModel::onNameChange,
-                        label = { Text("Full name") },
+                        label = { Text(strings.fullName) },
                         singleLine = true,
                         shape = MaterialTheme.shapes.small,
                         modifier = Modifier.fillMaxWidth(),
                     )
                     Spacer(Modifier.height(12.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        listOf("female" to "Female", "male" to "Male", "other" to "Other")
+                        listOf(
+                            "female" to strings.genderFemale,
+                            "male" to strings.genderMale,
+                            "other" to strings.genderOther,
+                        )
                             .forEach { (key, label) ->
                                 val selected = state.gender == key
                                 Box(
@@ -197,8 +197,8 @@ fun RegisterScreen(
                         OutlinedTextField(
                             value = state.dob,
                             onValueChange = viewModel::onDobChange,
-                            label = { Text("Date of birth") },
-                            placeholder = { Text("YYYY-MM-DD") },
+                            label = { Text(strings.dateOfBirth) },
+                            placeholder = { Text(strings.dobPlaceholder) },
                             singleLine = true,
                             isError = state.dobError != null,
                             supportingText = state.dobError?.let { { Text(it) } },
@@ -208,7 +208,7 @@ fun RegisterScreen(
                         OutlinedTextField(
                             value = state.bloodGroup,
                             onValueChange = viewModel::onBloodGroupChange,
-                            label = { Text("Blood group") },
+                            label = { Text(strings.bloodGroup) },
                             singleLine = true,
                             shape = MaterialTheme.shapes.small,
                             modifier = Modifier.weight(1f),
@@ -218,7 +218,7 @@ fun RegisterScreen(
                     OutlinedTextField(
                         value = state.phone,
                         onValueChange = viewModel::onPhoneChange,
-                        label = { Text("Phone (optional)") },
+                        label = { Text(strings.phoneOptional) },
                         singleLine = true,
                         shape = MaterialTheme.shapes.small,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
@@ -230,20 +230,20 @@ fun RegisterScreen(
 
                 // --- Category -----------------------------------------------
                 SectionCard {
-                    SectionLabel("Category")
+                    SectionLabel(strings.sectionCategory)
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        "This decides which schedule and guidelines apply.",
+                        strings.categoryHint,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Spacer(Modifier.height(12.dp))
-                    CATEGORIES.chunked(3).forEach { row ->
+                    CATEGORY_KEYS.chunked(3).forEach { row ->
                         Row(
                             Modifier.fillMaxWidth().padding(bottom = 8.dp),
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
-                            row.forEach { (key, label) ->
+                            row.forEach { key ->
                                 val selected = state.category == key
                                 Box(
                                     Modifier
@@ -258,7 +258,7 @@ fun RegisterScreen(
                                     contentAlignment = Alignment.Center,
                                 ) {
                                     Text(
-                                        label,
+                                        categoryLabel(key),
                                         style = MaterialTheme.typography.labelMedium,
                                         color = if (selected) MaterialTheme.colorScheme.primary
                                         else MaterialTheme.colorScheme.onSurfaceVariant,
@@ -274,15 +274,15 @@ fun RegisterScreen(
                         OutlinedTextField(
                             value = state.lmp,
                             onValueChange = viewModel::onLmpChange,
-                            label = { Text("Last menstrual period") },
-                            placeholder = { Text("YYYY-MM-DD") },
+                            label = { Text(strings.lastMenstrualPeriod) },
+                            placeholder = { Text(strings.dobPlaceholder) },
                             singleLine = true,
                             shape = MaterialTheme.shapes.small,
                             modifier = Modifier.fillMaxWidth(),
                         )
                         Spacer(Modifier.height(6.dp))
                         Text(
-                            "Used to work out the due date and the ANC visit schedule.",
+                            strings.lmpHint,
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -293,7 +293,7 @@ fun RegisterScreen(
                         OutlinedTextField(
                             value = state.birthWeight,
                             onValueChange = viewModel::onBirthWeightChange,
-                            label = { Text("Birth weight (kg)") },
+                            label = { Text(strings.birthWeightKg) },
                             singleLine = true,
                             shape = MaterialTheme.shapes.small,
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
@@ -301,8 +301,7 @@ fun RegisterScreen(
                         )
                         Spacer(Modifier.height(6.dp))
                         Text(
-                            "The full national immunisation schedule is created " +
-                                "automatically from the date of birth.",
+                            strings.infantScheduleHint,
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -327,7 +326,7 @@ fun RegisterScreen(
                             color = MaterialTheme.colorScheme.onPrimary,
                         )
                     } else {
-                        Text("Register patient", style = MaterialTheme.typography.labelLarge)
+                        Text(strings.registerButton, style = MaterialTheme.typography.labelLarge)
                     }
                 }
                 Spacer(Modifier.height(40.dp))

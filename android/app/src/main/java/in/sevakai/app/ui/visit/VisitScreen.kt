@@ -67,6 +67,7 @@ import `in`.sevakai.app.ui.components.Notice
 import `in`.sevakai.app.ui.components.NoticeTone
 import `in`.sevakai.app.ui.components.SectionCard
 import `in`.sevakai.app.ui.components.SectionLabel
+import `in`.sevakai.app.ui.i18n.LocalStrings
 
 @Composable
 fun VisitScreen(
@@ -81,6 +82,7 @@ fun VisitScreen(
         factory = VisitViewModel.factory(application, repository, patientId)
     )
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val strings = LocalStrings.current
 
     var micGranted by remember {
         mutableStateOf(
@@ -124,10 +126,10 @@ fun VisitScreen(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 IconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = strings.back)
                 }
                 Column(Modifier.weight(1f)) {
-                    Text("Record visit", style = MaterialTheme.typography.titleMedium)
+                    Text(strings.recordVisitTitle, style = MaterialTheme.typography.titleMedium)
                     state.patient?.let {
                         Text(
                             it.name,
@@ -151,13 +153,13 @@ fun VisitScreen(
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 ModeTab(
-                    text = "Speak",
+                    text = strings.tabSpeak,
                     icon = Icons.Default.Mic,
                     selected = state.mode == VisitViewModel.Mode.VOICE,
                     modifier = Modifier.weight(1f),
                 ) { viewModel.setMode(VisitViewModel.Mode.VOICE) }
                 ModeTab(
-                    text = "Type",
+                    text = strings.tabType,
                     icon = Icons.Default.Keyboard,
                     selected = state.mode == VisitViewModel.Mode.TYPE,
                     modifier = Modifier.weight(1f),
@@ -185,10 +187,10 @@ fun VisitScreen(
             // speaks the story and types the numbers.
             Column(Modifier.padding(horizontal = 20.dp)) {
                 SectionCard {
-                    SectionLabel("Measurements")
+                    SectionLabel(strings.sectionMeasurements)
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        "Anything you type here is used exactly as entered.",
+                        strings.measurementsHint,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -202,7 +204,7 @@ fun VisitScreen(
                                 OutlinedTextField(
                                     value = state.vitals[field.key].orEmpty(),
                                     onValueChange = { viewModel.onVitalChange(field.key, it) },
-                                    label = { Text(field.label) },
+                                    label = { Text(field.label(strings)) },
                                     suffix = { Text(field.suffix) },
                                     isError = state.vitalErrors.containsKey(field.key),
                                     supportingText = state.vitalErrors[field.key]?.let {
@@ -226,15 +228,15 @@ fun VisitScreen(
 
                 SectionCard {
                     SectionLabel(
-                        if (state.mode == VisitViewModel.Mode.TYPE) "Visit notes"
-                        else "Extra notes (optional)"
+                        if (state.mode == VisitViewModel.Mode.TYPE) strings.visitNotes
+                        else strings.extraNotes
                     )
                     Spacer(Modifier.height(10.dp))
                     OutlinedTextField(
                         value = state.typedNotes,
                         onValueChange = viewModel::onNotesChange,
                         placeholder = {
-                            Text("What did you observe? Symptoms, advice given, anything unusual.")
+                            Text(strings.notesPlaceholder)
                         },
                         shape = MaterialTheme.shapes.small,
                         textStyle = MaterialTheme.typography.bodyLarge,
@@ -252,7 +254,7 @@ fun VisitScreen(
                         onClick = onDone,
                         modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
                         shape = MaterialTheme.shapes.small,
-                    ) { Text("Done", style = MaterialTheme.typography.labelLarge) }
+                    ) { Text(strings.done, style = MaterialTheme.typography.labelLarge) }
                 }
 
                 if (state.error != null) {
@@ -279,14 +281,14 @@ fun VisitScreen(
                                 color = MaterialTheme.colorScheme.onPrimary,
                             )
                             Spacer(Modifier.width(12.dp))
-                            Text("Analysing…", style = MaterialTheme.typography.labelLarge)
+                            Text(strings.analysing, style = MaterialTheme.typography.labelLarge)
                         } else {
-                            Text("Save visit", style = MaterialTheme.typography.labelLarge)
+                            Text(strings.saveVisit, style = MaterialTheme.typography.labelLarge)
                         }
                     }
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        "If there is no network, the visit is saved on this phone and sent later.",
+                        strings.offlineSaveHint,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center,
@@ -347,6 +349,7 @@ private fun VoiceSection(
     onTranscriptChange: (String) -> Unit,
     onLanguage: (String) -> Unit,
 ) {
+    val strings = LocalStrings.current
     Column(Modifier.padding(horizontal = 20.dp)) {
 
         // Language choice sits next to the mic, because it changes what the
@@ -417,7 +420,7 @@ private fun VoiceSection(
                         state.listening -> Icons.Default.Stop
                         else -> Icons.Default.Mic
                     },
-                    contentDescription = if (active) "Stop" else "Start speaking",
+                    contentDescription = if (active) strings.tabSpeak else strings.micPrompt,
                     modifier = Modifier.size(44.dp),
                     tint = if (active) MaterialTheme.colorScheme.onPrimary
                     else MaterialTheme.colorScheme.primary,
@@ -430,10 +433,10 @@ private fun VoiceSection(
         Text(
             when {
                 state.recordingAudio ->
-                    "Recording… ${state.recordedMs / 1000}s. Tap to stop."
-                state.listening -> "Listening… speak naturally, then tap to stop."
-                state.transcript.isNotBlank() -> "Tap the mic to add more."
-                else -> "Tap the mic and describe the visit in your own words."
+                    strings.micRecording(state.recordedMs / 1000)
+                state.listening -> strings.micListening
+                state.transcript.isNotBlank() -> strings.micTapToAdd
+                else -> strings.micPrompt
             },
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -471,18 +474,18 @@ private fun VoiceSection(
                     Spacer(Modifier.width(10.dp))
                     Column(Modifier.weight(1f)) {
                         Text(
-                            "Recording saved (${state.recordedMs / 1000}s)",
+                            strings.recordingSaved(state.recordedMs / 1000),
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Medium,
                         )
                         Text(
-                            "It will be transcribed when this visit is sent.",
+                            strings.recordingSavedHint,
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                     IconButton(onClick = onDiscardRecord) {
-                        Icon(Icons.Default.Delete, contentDescription = "Discard recording")
+                        Icon(Icons.Default.Delete, contentDescription = strings.discardRecording)
                     }
                 }
             }
@@ -495,11 +498,11 @@ private fun VoiceSection(
                 Icon(Icons.Default.FiberManualRecord, contentDescription = null,
                     modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(10.dp))
-                Text("Record audio for later", style = MaterialTheme.typography.labelLarge)
+                Text(strings.recordForLater, style = MaterialTheme.typography.labelLarge)
             }
             Spacer(Modifier.height(6.dp))
             Text(
-                "Use this where speech recognition will not work without a network.",
+                strings.recordForLaterHint,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
@@ -511,10 +514,10 @@ private fun VoiceSection(
         if (state.transcript.isNotBlank()) {
             Spacer(Modifier.height(18.dp))
             SectionCard {
-                SectionLabel("What was heard")
+                SectionLabel(strings.whatWasHeard)
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    "Correct anything that came out wrong before saving.",
+                    strings.whatWasHeardHint,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

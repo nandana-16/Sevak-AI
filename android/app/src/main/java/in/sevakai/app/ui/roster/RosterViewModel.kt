@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import `in`.sevakai.app.data.PatientRow
 import `in`.sevakai.app.data.Repository
 import `in`.sevakai.app.data.remote.UnauthorizedException
+import `in`.sevakai.app.ui.i18n.stringsFor
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -47,6 +48,7 @@ class RosterViewModel(private val repository: Repository) : ViewModel() {
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
 
     private var searchJob: kotlinx.coroutines.Job? = null
+    private var language: String = "hi"
 
     init {
         viewModelScope.launch {
@@ -56,6 +58,9 @@ class RosterViewModel(private val repository: Repository) : ViewModel() {
                     village = session?.village,
                 )
             }
+        }
+        viewModelScope.launch {
+            repository.settings.language.collect { language = it }
         }
         load()
         viewModelScope.launch {
@@ -86,7 +91,7 @@ class RosterViewModel(private val repository: Repository) : ViewModel() {
             } catch (e: Exception) {
                 _state.value = _state.value.copy(
                     loading = false,
-                    error = e.message ?: "Could not load the roster",
+                    error = e.message ?: stringsFor(language).couldNotLoadRoster,
                 )
             }
         }

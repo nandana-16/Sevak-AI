@@ -50,6 +50,7 @@ import `in`.sevakai.app.ui.components.Risk
 import `in`.sevakai.app.ui.components.RiskChip
 import `in`.sevakai.app.ui.components.SectionCard
 import `in`.sevakai.app.ui.components.SectionLabel
+import `in`.sevakai.app.ui.i18n.LocalStrings
 import `in`.sevakai.app.ui.components.color
 import `in`.sevakai.app.ui.components.tint
 import `in`.sevakai.app.ui.roster.categoryLabel
@@ -66,6 +67,7 @@ fun PatientScreen(
         factory = PatientViewModel.factory(repository, patientId)
     )
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val strings = LocalStrings.current
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -79,7 +81,7 @@ fun PatientScreen(
                 ) {
                     Icon(Icons.Default.Mic, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
-                    Text("Record visit", style = MaterialTheme.typography.labelLarge)
+                    Text(strings.recordVisit, style = MaterialTheme.typography.labelLarge)
                 }
             }
         },
@@ -90,16 +92,16 @@ fun PatientScreen(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 IconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = strings.back)
                 }
-                Text("Patient profile", style = MaterialTheme.typography.titleMedium)
+                Text(strings.patientProfile, style = MaterialTheme.typography.titleMedium)
             }
 
             when {
-                state.loading && state.patient == null -> LoadingBlock("Opening profile…")
+                state.loading && state.patient == null -> LoadingBlock(strings.openingProfile)
                 state.patient == null -> EmptyState(
-                    title = "Could not open this profile",
-                    body = state.error ?: "Please try again when you have a connection.",
+                    title = strings.couldNotOpenProfile,
+                    body = state.error ?: strings.couldNotOpenProfileBody,
                 )
                 else -> PatientBody(
                     patient = state.patient!!,
@@ -120,6 +122,7 @@ private fun PatientBody(
     onMarkGiven: (String) -> Unit,
 ) {
     val risk = Risk.from(patient.currentRisk)
+    val strings = LocalStrings.current
 
     LazyColumn(
         contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 100.dp),
@@ -128,7 +131,7 @@ private fun PatientBody(
         if (fromCache) {
             item {
                 Notice(
-                    "Offline — showing the copy saved on this phone.",
+                    strings.profileOffline,
                     tone = NoticeTone.OFFLINE,
                 )
             }
@@ -158,7 +161,7 @@ private fun PatientBody(
         if (!patient.lastVisitSummary.isNullOrBlank()) {
             item {
                 SectionCard(accent = MaterialTheme.colorScheme.primary) {
-                    SectionLabel("Last visit")
+                    SectionLabel(strings.sectionLastVisit)
                     Spacer(Modifier.height(6.dp))
                     Text(patient.lastVisitSummary!!, style = MaterialTheme.typography.bodyLarge)
                     if (patient.lastVisitAt != null) {
@@ -175,31 +178,31 @@ private fun PatientBody(
 
         if (patient.nextVisitDue != null) {
             item {
-                Notice("Next visit due ${patient.nextVisitDue}", tone = NoticeTone.INFO)
+                Notice(strings.nextVisitDue(patient.nextVisitDue!!), tone = NoticeTone.INFO)
             }
         }
 
         // --- Basic details --------------------------------------------------
         item {
             SectionCard {
-                SectionLabel("Details")
+                SectionLabel(strings.sectionDetails)
                 Spacer(Modifier.height(12.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    LabelledValue("Date of birth", patient.dob, Modifier.weight(1f))
-                    LabelledValue("Blood group", patient.bloodGroup, Modifier.weight(1f))
+                    LabelledValue(strings.dateOfBirth, patient.dob, Modifier.weight(1f))
+                    LabelledValue(strings.bloodGroup, patient.bloodGroup, Modifier.weight(1f))
                 }
                 Spacer(Modifier.height(14.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    LabelledValue("Phone", patient.phone, Modifier.weight(1f))
-                    LabelledValue("Household", patient.householdId, Modifier.weight(1f))
+                    LabelledValue(strings.phone, patient.phone, Modifier.weight(1f))
+                    LabelledValue(strings.household, patient.householdId, Modifier.weight(1f))
                 }
                 if (!patient.guardianName.isNullOrBlank()) {
                     Spacer(Modifier.height(14.dp))
-                    LabelledValue("Guardian", patient.guardianName)
+                    LabelledValue(strings.guardian, patient.guardianName)
                 }
                 if (!patient.address.isNullOrBlank()) {
                     Spacer(Modifier.height(14.dp))
-                    LabelledValue("Address", patient.address)
+                    LabelledValue(strings.address, patient.address)
                 }
                 Spacer(Modifier.height(14.dp))
                 Divider()
@@ -216,13 +219,12 @@ private fun PatientBody(
                     Spacer(Modifier.width(8.dp))
                     Column {
                         Text(
-                            "Aadhaar ${patient.aadhaarMasked}",
+                            strings.aadhaarLine(patient.aadhaarMasked),
                             style = MaterialTheme.typography.bodyMedium,
                         )
                         Text(
-                            if (patient.aadhaarVerified)
-                                "Verified offline at registration"
-                            else "Not linked",
+                            if (patient.aadhaarVerified) strings.aadhaarVerified
+                            else strings.aadhaarNotLinked,
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -235,38 +237,38 @@ private fun PatientBody(
         patient.pregnancy?.let { pregnancy ->
             item {
                 SectionCard {
-                    SectionLabel("Pregnancy")
+                    SectionLabel(strings.sectionPregnancy)
                     Spacer(Modifier.height(12.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                         LabelledValue(
-                            "Gestation",
-                            pregnancy.gestationWeeks?.let { "$it weeks" },
+                            strings.gestation,
+                            pregnancy.gestationWeeks?.let { strings.weeksSuffix(it) },
                             Modifier.weight(1f),
                         )
-                        LabelledValue("Due date", pregnancy.edd, Modifier.weight(1f))
+                        LabelledValue(strings.dueDate, pregnancy.edd, Modifier.weight(1f))
                     }
                     Spacer(Modifier.height(14.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                         LabelledValue(
-                            "Gravida / Para",
+                            strings.gravidaPara,
                             "G${pregnancy.gravida ?: "-"} P${pregnancy.para ?: "-"}",
                             Modifier.weight(1f),
                         )
                         LabelledValue(
-                            "ANC visits",
-                            "${pregnancy.ancVisitsCompleted} of 4",
+                            strings.ancVisits,
+                            strings.ancVisitsValue(pregnancy.ancVisitsCompleted),
                             Modifier.weight(1f),
                         )
                     }
                     Spacer(Modifier.height(14.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                         LabelledValue(
-                            "Last Hb",
+                            strings.lastHb,
                             pregnancy.lastHb?.let { "$it g/dL" },
                             Modifier.weight(1f),
                         )
                         LabelledValue(
-                            "Last BP",
+                            strings.lastBp,
                             pregnancy.lastBpSystolic?.let {
                                 "$it/${pregnancy.lastBpDiastolic ?: "-"}"
                             },
@@ -275,20 +277,20 @@ private fun PatientBody(
                     }
                     Spacer(Modifier.height(14.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                        LabelledValue("TT doses", pregnancy.ttDoses.toString(), Modifier.weight(1f))
+                        LabelledValue(strings.ttDoses, pregnancy.ttDoses.toString(), Modifier.weight(1f))
                         LabelledValue(
-                            "IFA tablets",
+                            strings.ifaTablets,
                             pregnancy.ifaTabletsGiven.toString(),
                             Modifier.weight(1f),
                         )
                     }
                     if (!pregnancy.plannedDeliveryPlace.isNullOrBlank()) {
                         Spacer(Modifier.height(14.dp))
-                        LabelledValue("Planned delivery", pregnancy.plannedDeliveryPlace)
+                        LabelledValue(strings.plannedDelivery, pregnancy.plannedDeliveryPlace)
                     }
                     if (pregnancy.highRiskFactors.isNotEmpty()) {
                         Spacer(Modifier.height(14.dp))
-                        SectionLabel("High-risk factors")
+                        SectionLabel(strings.highRiskFactors)
                         Spacer(Modifier.height(8.dp))
                         pregnancy.highRiskFactors.forEach { factor ->
                             Row(
@@ -314,40 +316,40 @@ private fun PatientBody(
         patient.infant?.let { infant ->
             item {
                 SectionCard {
-                    SectionLabel("Newborn details")
+                    SectionLabel(strings.sectionNewborn)
                     Spacer(Modifier.height(12.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                         LabelledValue(
-                            "Birth weight",
+                            strings.birthWeight,
                             infant.birthWeightKg?.let { "$it kg" },
                             Modifier.weight(1f),
                         )
                         LabelledValue(
-                            "Born at",
-                            infant.gestationWeeks?.let { "$it weeks" },
+                            strings.bornAt,
+                            infant.gestationWeeks?.let { strings.weeksSuffix(it) },
                             Modifier.weight(1f),
                         )
                     }
                     Spacer(Modifier.height(14.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                         LabelledValue(
-                            "Current weight",
+                            strings.currentWeight,
                             infant.lastWeightKg?.let { "$it kg" },
                             Modifier.weight(1f),
                         )
                         LabelledValue(
-                            "MUAC",
+                            strings.muac,
                             infant.lastMuacCm?.let { "$it cm" },
                             Modifier.weight(1f),
                         )
                     }
                     Spacer(Modifier.height(14.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                        LabelledValue("Delivery", infant.deliveryType, Modifier.weight(1f))
+                        LabelledValue(strings.delivery, infant.deliveryType, Modifier.weight(1f))
                         LabelledValue(
-                            "Feeding",
+                            strings.feeding,
                             infant.exclusiveBreastfeeding?.let {
-                                if (it) "Exclusive breastfeeding" else "Mixed feeding"
+                                if (it) strings.exclusiveBreastfeeding else strings.mixedFeeding
                             },
                             Modifier.weight(1f),
                         )
@@ -365,9 +367,9 @@ private fun PatientBody(
             item {
                 SectionCard(accent = if (overdue.isNotEmpty()) Risk.AMBER.color() else null) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        SectionLabel("Immunisation", Modifier.weight(1f))
+                        SectionLabel(strings.sectionImmunisation, Modifier.weight(1f))
                         Text(
-                            "$done given",
+                            strings.givenCount(done),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -375,7 +377,7 @@ private fun PatientBody(
                     if (overdue.isNotEmpty()) {
                         Spacer(Modifier.height(12.dp))
                         Text(
-                            "${overdue.size} overdue",
+                            strings.overdueCount(overdue.size),
                             style = MaterialTheme.typography.titleSmall,
                             color = Risk.AMBER.color(),
                         )
@@ -385,7 +387,7 @@ private fun PatientBody(
                     if (upcoming.isNotEmpty()) {
                         Spacer(Modifier.height(12.dp))
                         Text(
-                            "Coming up",
+                            strings.comingUp,
                             style = MaterialTheme.typography.titleSmall,
                         )
                         Spacer(Modifier.height(6.dp))
@@ -394,7 +396,7 @@ private fun PatientBody(
                     if (overdue.isEmpty() && upcoming.isEmpty()) {
                         Spacer(Modifier.height(10.dp))
                         Text(
-                            "Immunisation schedule is complete.",
+                            strings.immunisationComplete,
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -407,16 +409,16 @@ private fun PatientBody(
         if (patient.conditions.isNotEmpty()) {
             item {
                 SectionCard {
-                    SectionLabel("Medical history")
+                    SectionLabel(strings.sectionMedicalHistory)
                     Spacer(Modifier.height(10.dp))
                     val ongoing = patient.conditions.filter { it.ongoing }
                     val past = patient.conditions.filter { !it.ongoing }
                     if (ongoing.isNotEmpty()) {
-                        Text("Ongoing", style = MaterialTheme.typography.titleSmall)
+                        Text(strings.ongoing, style = MaterialTheme.typography.titleSmall)
                         Spacer(Modifier.height(4.dp))
                         ongoing.forEach {
                             Text(
-                                "• ${it.name}${it.diagnosedOn?.let { d -> "  (since $d)" }.orEmpty()}",
+                                "• ${it.name}${it.diagnosedOn?.let { d -> strings.sinceDate(d) }.orEmpty()}",
                                 style = MaterialTheme.typography.bodyMedium,
                                 modifier = Modifier.padding(vertical = 2.dp),
                             )
@@ -424,7 +426,7 @@ private fun PatientBody(
                     }
                     if (past.isNotEmpty()) {
                         Spacer(Modifier.height(10.dp))
-                        Text("Past", style = MaterialTheme.typography.titleSmall)
+                        Text(strings.pastHistory, style = MaterialTheme.typography.titleSmall)
                         Spacer(Modifier.height(4.dp))
                         past.forEach {
                             Text(
@@ -441,7 +443,7 @@ private fun PatientBody(
 
         // --- Visit history --------------------------------------------------
         if (patient.recentVisits.isNotEmpty()) {
-            item { SectionLabel("Previous visits") }
+            item { SectionLabel(strings.sectionPreviousVisits) }
             items(patient.recentVisits, key = { it.id }) { visit ->
                 val visitRisk = Risk.from(visit.riskLevel)
                 SectionCard(onClick = { onOpenVisit(visit.id) }) {
@@ -471,6 +473,7 @@ private fun PatientBody(
 
 @Composable
 private fun VaccinationRow(vaccination: VaccinationDto, onMarkGiven: (String) -> Unit) {
+    val strings = LocalStrings.current
     Row(
         Modifier.fillMaxWidth().padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -482,14 +485,14 @@ private fun VaccinationRow(vaccination: VaccinationDto, onMarkGiven: (String) ->
                 fontWeight = FontWeight.Medium,
             )
             Text(
-                "Due ${vaccination.dueDate ?: "-"}",
+                strings.dueOn(vaccination.dueDate ?: "-"),
                 style = MaterialTheme.typography.bodySmall,
                 color = if (vaccination.overdue) Risk.AMBER.color()
                 else MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
         TextButton(onClick = { onMarkGiven(vaccination.id) }) {
-            Text("Mark given", style = MaterialTheme.typography.labelMedium)
+            Text(strings.markGiven, style = MaterialTheme.typography.labelMedium)
         }
     }
 }

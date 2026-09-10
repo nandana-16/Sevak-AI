@@ -50,6 +50,7 @@ import `in`.sevakai.app.ui.components.Notice
 import `in`.sevakai.app.ui.components.NoticeTone
 import `in`.sevakai.app.ui.components.SectionCard
 import `in`.sevakai.app.ui.components.SectionLabel
+import `in`.sevakai.app.ui.i18n.LocalStrings
 import `in`.sevakai.app.ui.theme.LocalRiskPalette
 
 /**
@@ -67,6 +68,7 @@ fun ServerSettingsScreen(repository: Repository, onBack: () -> Unit) {
     )
     val state by viewModel.state.collectAsStateWithLifecycle()
     val palette = LocalRiskPalette.current
+    val strings = LocalStrings.current
 
     Scaffold(containerColor = MaterialTheme.colorScheme.background) { padding ->
         Column(
@@ -81,12 +83,12 @@ fun ServerSettingsScreen(repository: Repository, onBack: () -> Unit) {
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 IconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = strings.back)
                 }
                 Column(Modifier.weight(1f)) {
-                    Text("Server", style = MaterialTheme.typography.titleMedium)
+                    Text(strings.serverTitle, style = MaterialTheme.typography.titleMedium)
                     Text(
-                        "Where this app sends visits",
+                        strings.serverSubtitle,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -97,26 +99,26 @@ fun ServerSettingsScreen(repository: Repository, onBack: () -> Unit) {
                 Spacer(Modifier.height(8.dp))
 
                 SectionCard {
-                    SectionLabel("How is this phone connected?")
+                    SectionLabel(strings.howConnected)
                     Spacer(Modifier.height(12.dp))
 
                     PresetRow(
-                        title = "USB cable",
-                        subtitle = "127.0.0.1:8010 — run  adb reverse tcp:8010 tcp:8010",
+                        title = strings.presetUsb,
+                        subtitle = strings.presetUsbHint,
                         selected = state.isUsb,
                     ) { viewModel.usePreset(`in`.sevakai.app.data.SettingsStore.USB) }
 
                     Spacer(Modifier.height(8.dp))
                     PresetRow(
-                        title = "Emulator",
-                        subtitle = "10.0.2.2:8010 — only works on an emulator",
+                        title = strings.presetEmulator,
+                        subtitle = strings.presetEmulatorHint,
                         selected = state.isEmulator,
                     ) { viewModel.usePreset(`in`.sevakai.app.data.SettingsStore.EMULATOR) }
 
                     Spacer(Modifier.height(8.dp))
                     PresetRow(
-                        title = "Same Wi-Fi",
-                        subtitle = "Enter your laptop's IP address below",
+                        title = strings.presetWifi,
+                        subtitle = strings.presetWifiHint,
                         selected = state.isCustom,
                     ) { viewModel.useCustom() }
                 }
@@ -124,7 +126,7 @@ fun ServerSettingsScreen(repository: Repository, onBack: () -> Unit) {
                 Spacer(Modifier.height(14.dp))
 
                 SectionCard {
-                    SectionLabel("Address")
+                    SectionLabel(strings.addressLabel)
                     Spacer(Modifier.height(10.dp))
                     OutlinedTextField(
                         value = state.input,
@@ -140,14 +142,14 @@ fun ServerSettingsScreen(repository: Repository, onBack: () -> Unit) {
                     )
                     Spacer(Modifier.height(6.dp))
                     Text(
-                        "Will connect to  ${state.resolvedLabel}",
+                        strings.willConnectTo(state.resolvedLabel),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontFamily = FontFamily.Monospace,
                     )
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        "You can type just the IP — the port and http:// are added for you.",
+                        strings.addressHint,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -167,7 +169,7 @@ fun ServerSettingsScreen(repository: Repository, onBack: () -> Unit) {
                                 Modifier.size(18.dp), strokeWidth = 2.dp,
                             )
                         } else {
-                            Text("Test connection", style = MaterialTheme.typography.labelLarge)
+                            Text(strings.testConnection, style = MaterialTheme.typography.labelLarge)
                         }
                     }
                     Button(
@@ -176,7 +178,7 @@ fun ServerSettingsScreen(repository: Repository, onBack: () -> Unit) {
                         shape = MaterialTheme.shapes.small,
                         modifier = Modifier.weight(1f).heightIn(min = 52.dp),
                     ) {
-                        Text("Save", style = MaterialTheme.typography.labelLarge)
+                        Text(strings.save, style = MaterialTheme.typography.labelLarge)
                     }
                 }
 
@@ -193,7 +195,7 @@ fun ServerSettingsScreen(repository: Repository, onBack: () -> Unit) {
                                 )
                                 Spacer(Modifier.width(10.dp))
                                 Text(
-                                    "Connected",
+                                    strings.connected,
                                     style = MaterialTheme.typography.titleSmall,
                                     color = palette.green,
                                 )
@@ -203,9 +205,7 @@ fun ServerSettingsScreen(repository: Repository, onBack: () -> Unit) {
                             if (!result.llmReady) {
                                 Spacer(Modifier.height(10.dp))
                                 Notice(
-                                    "The server is reachable but has no LLM configured. " +
-                                        "Visits will be classified by rules only. Add " +
-                                        "GROQ_API_KEY to backend/.env.",
+                                    strings.noLlmWarning,
                                     tone = NoticeTone.WARNING,
                                 )
                             }
@@ -234,19 +234,16 @@ fun ServerSettingsScreen(repository: Repository, onBack: () -> Unit) {
 
                 if (state.saved) {
                     Spacer(Modifier.height(14.dp))
-                    Notice("Saved.", tone = NoticeTone.INFO)
+                    Notice(strings.saved, tone = NoticeTone.INFO)
                 }
 
                 Spacer(Modifier.height(20.dp))
 
                 SectionCard {
-                    SectionLabel("Finding your laptop's IP")
+                    SectionLabel(strings.findingYourIp)
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        "Windows:  ipconfig  — look for IPv4 Address\n" +
-                            "macOS / Linux:  ifconfig | grep inet\n\n" +
-                            "The phone and laptop must be on the same Wi-Fi, and the " +
-                            "backend must be started with --host 0.0.0.0.",
+                        strings.findingYourIpBody,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontFamily = FontFamily.Monospace,

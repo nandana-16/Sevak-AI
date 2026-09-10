@@ -73,6 +73,47 @@ Return JSON with exactly this shape:
 Put anything you could not confidently interpret into `unclear`."""
 
 
+_HINDI_NOTE = """OUTPUT LANGUAGE: HINDI (Devanagari script).
+
+Every field listed below must be written in Hindi. Naming them explicitly
+because a general instruction gets applied to the prose and quietly skipped on
+the list fields:
+  - rationale
+  - danger_signs           <- EVERY entry, including short ones like "headache"
+  - what_to_tell_the_family
+  - actions[].action
+  - follow_up_reason
+  - summary
+  - referral_reason
+
+Use plain spoken Hindi, not formal Sanskritised register - the reader is an
+ASHA worker, who may have limited formal schooling.
+
+Keep in Latin script exactly as written: BP, Hb, SpO2, MUAC, ANC, IFA, TT, EDD.
+These are what she is trained on and what her registers already use.
+Keep numerals as digits (168/112, not one hundred sixty-eight).
+
+Do NOT translate the structured values: risk_level stays "red"/"yellow"/
+"green", urgency stays "now"/"today"/"this_week"/"routine", and
+cited_excerpts stays a list of integers."""
+
+OUTPUT_LANGUAGE = {
+    "hi": _HINDI_NOTE,
+    "en": "Write every free-text field you return in clear, plain English.",
+}
+
+
+def language_note(language: str | None) -> str:
+    """Instruction appended to each agent prompt.
+
+    The worker's language has to reach the model, not just the interface. A
+    Hindi interface wrapped around an English clinical recommendation is the
+    half-translated result that makes an app feel foreign - and the
+    recommendation is the part she actually acts on.
+    """
+    return OUTPUT_LANGUAGE.get((language or "en")[:2], OUTPUT_LANGUAGE["en"])
+
+
 def extraction_user(patient_context: str, transcript: str, typed_notes: str | None) -> str:
     sections = [f"PATIENT ON FILE:\n{patient_context}"]
     if transcript:
@@ -126,7 +167,13 @@ Return JSON:
 }"""
 
 
-def risk_user(patient_context: str, findings: str, excerpts: str, rule_flags: str) -> str:
+def risk_user(
+    patient_context: str,
+    findings: str,
+    excerpts: str,
+    rule_flags: str,
+    language: str | None = "en",
+) -> str:
     return f"""PATIENT:
 {patient_context}
 
@@ -139,7 +186,9 @@ DETERMINISTIC RULE CHECK (protocol thresholds already applied):
 RETRIEVED NHM GUIDELINE EXCERPTS:
 {excerpts}
 
-Classify the risk. Cite excerpts by index."""
+Classify the risk. Cite excerpts by index.
+
+{language_note(language)}"""
 
 
 ACTION_SYSTEM = """You are the action and scheduling agent for India's ASHA
@@ -174,7 +223,13 @@ Return JSON:
 }"""
 
 
-def action_user(patient_context: str, findings: str, risk_level: str, rationale: str) -> str:
+def action_user(
+    patient_context: str,
+    findings: str,
+    risk_level: str,
+    rationale: str,
+    language: str | None = "en",
+) -> str:
     return f"""PATIENT:
 {patient_context}
 
@@ -184,4 +239,6 @@ FINDINGS:
 RISK: {risk_level}
 REASON: {rationale}
 
-Decide the actions and the follow-up date."""
+Decide the actions and the follow-up date.
+
+{language_note(language)}"""

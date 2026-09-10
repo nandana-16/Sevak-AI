@@ -38,6 +38,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import `in`.sevakai.app.ui.i18n.LocalStrings
 import `in`.sevakai.app.ui.theme.LocalRiskPalette
 
 /** Canonical risk levels. Parsing lives here so no screen invents its own. */
@@ -74,18 +75,24 @@ fun Risk.tint(): Color = with(LocalRiskPalette.current) {
 }
 
 /** Wording a worker acts on, not a colour name. */
-fun Risk.label(): String = when (this) {
-    Risk.RED -> "Go to hospital today"
-    Risk.AMBER -> "See a doctor soon"
-    Risk.GREEN -> "Healthy"
-    Risk.UNKNOWN -> "Not assessed"
+@Composable
+fun Risk.label(): String = with(LocalStrings.current) {
+    when (this@label) {
+        Risk.RED -> riskRedAction
+        Risk.AMBER -> riskAmberAction
+        Risk.GREEN -> riskGreenAction
+        Risk.UNKNOWN -> riskUnknownAction
+    }
 }
 
-fun Risk.shortLabel(): String = when (this) {
-    Risk.RED -> "High risk"
-    Risk.AMBER -> "Watch"
-    Risk.GREEN -> "Healthy"
-    Risk.UNKNOWN -> "New"
+@Composable
+fun Risk.shortLabel(): String = with(LocalStrings.current) {
+    when (this@shortLabel) {
+        Risk.RED -> riskRedShort
+        Risk.AMBER -> riskAmberShort
+        Risk.GREEN -> riskGreenShort
+        Risk.UNKNOWN -> riskUnknownShort
+    }
 }
 
 /**
@@ -174,7 +181,7 @@ fun LabelledValue(
         )
         Spacer(Modifier.height(2.dp))
         Text(
-            value?.takeIf { it.isNotBlank() } ?: "—",
+            value?.takeIf { it.isNotBlank() } ?: LocalStrings.current.notRecorded,
             style = MaterialTheme.typography.bodyLarge,
             fontWeight = FontWeight.Medium,
         )
@@ -225,7 +232,7 @@ fun Notice(
 }
 
 @Composable
-fun LoadingBlock(message: String = "Loading…", modifier: Modifier = Modifier) {
+fun LoadingBlock(message: String? = null, modifier: Modifier = Modifier) {
     Column(
         modifier
             .fillMaxWidth()
@@ -239,7 +246,7 @@ fun LoadingBlock(message: String = "Loading…", modifier: Modifier = Modifier) 
             color = MaterialTheme.colorScheme.primary,
         )
         Text(
-            message,
+            message ?: LocalStrings.current.loading,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,

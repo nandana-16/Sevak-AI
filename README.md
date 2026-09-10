@@ -209,6 +209,23 @@ Idempotency is keyed on a UUID the phone generates, so retrying is always safe.
 through `backend/app/core/scoping.py`. Requesting another worker's patient
 returns 404, not 403 — a 403 would confirm the patient exists.
 
+**The language choice reaches the model, not just the labels.** The sign-in
+screen offers हिन्दी or English before anything else on it, because a worker who
+cannot read English should not have to parse an English form to find the switch
+that fixes that. Choosing Hindi translates the interface *and* tells the agents
+to write their rationale, danger signs, actions and summary in Hindi *and* sets
+the speech recogniser to `hi-IN` - one choice, not three. A Hindi interface
+wrapped around an English clinical recommendation would be the half-translated
+result that makes an app feel foreign, and the recommendation is the part she
+acts on.
+
+Strings live in a Kotlin table read through a CompositionLocal rather than in
+`values-hi/strings.xml`, because switching an Android resource locale at runtime
+recreates the activity - which would discard an in-progress visit, including an
+unsent recording. Clinical abbreviations (BP, Hb, SpO2, MUAC, ANC, IFA, TT) stay
+in Latin script in both languages: they are what ASHA workers are trained on and
+what their registers already use.
+
 **Colour is never the only signal.** Every risk chip carries a word as well as
 a colour, because red/green is precisely the pair that roughly one man in
 twelve cannot distinguish, and it is the most consequential thing on screen.

@@ -5,6 +5,8 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import `in`.sevakai.app.data.Repository
 import `in`.sevakai.app.data.remote.PatientCreateRequest
+import `in`.sevakai.app.ui.i18n.Strings
+import `in`.sevakai.app.ui.i18n.stringsFor
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -49,6 +51,14 @@ class RegisterViewModel(private val repository: Repository) : ViewModel() {
     val state: StateFlow<State> = _state.asStateFlow()
 
     private var checkJob: Job? = null
+    private var language: String = "hi"
+    private val strings: Strings get() = stringsFor(language)
+
+    init {
+        viewModelScope.launch {
+            repository.settings.language.collect { language = it }
+        }
+    }
 
     fun onAadhaarChange(value: String) {
         val digits = value.filter(Char::isDigit).take(12)
@@ -74,15 +84,14 @@ class RegisterViewModel(private val repository: Repository) : ViewModel() {
                             aadhaarChecked = true,
                             aadhaarValid = result.valid && !result.alreadyRegistered,
                             aadhaarMessage = if (result.valid && !result.alreadyRegistered) {
-                                "Verified. Only ending ${result.last4} will be stored."
+                                strings.aadhaarValidMessage(result.last4.orEmpty())
                             } else result.reason,
                         )
                     }
                     .onFailure {
                         _state.value = _state.value.copy(
                             checkingAadhaar = false,
-                            aadhaarMessage = "Could not check the number while offline. " +
-                                "Registration needs a connection.",
+                            aadhaarMessage = strings.aadhaarOfflineMessage,
                         )
                     }
             }
@@ -131,9 +140,9 @@ class RegisterViewModel(private val repository: Repository) : ViewModel() {
         if (value.isBlank()) return null
         return try {
             val parsed = LocalDate.parse(value)
-            if (parsed.isAfter(LocalDate.now())) "Date cannot be in the future" else null
+            if (parsed.isAfter(LocalDate.now())) strings.dateFutureError else null
         } catch (e: DateTimeParseException) {
-            "Use the format YYYY-MM-DD"
+            strings.dateFormatError
         }
     }
 
@@ -164,8 +173,7 @@ class RegisterViewModel(private val repository: Repository) : ViewModel() {
             }.onFailure {
                 _state.value = _state.value.copy(
                     submitting = false,
-                    error = it.message
-                        ?: "Could not register. Registration needs a connection.",
+                    error = it.message ?: strings.registerFailed,
                 )
             }
         }

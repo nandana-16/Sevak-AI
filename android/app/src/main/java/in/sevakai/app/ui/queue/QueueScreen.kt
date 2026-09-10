@@ -44,6 +44,7 @@ import `in`.sevakai.app.ui.components.NoticeTone
 import `in`.sevakai.app.ui.components.Risk
 import `in`.sevakai.app.ui.components.RiskChip
 import `in`.sevakai.app.ui.components.SectionCard
+import `in`.sevakai.app.ui.i18n.LocalStrings
 import `in`.sevakai.app.ui.components.color
 import `in`.sevakai.app.ui.theme.LocalRiskPalette
 import java.text.SimpleDateFormat
@@ -62,6 +63,7 @@ fun QueueScreen(repository: Repository, onBack: () -> Unit) {
     val viewModel: QueueViewModel = viewModel(factory = QueueViewModel.factory(repository))
     val items by viewModel.items.collectAsStateWithLifecycle()
     val syncing by viewModel.syncing.collectAsStateWithLifecycle()
+    val strings = LocalStrings.current
 
     val waiting = items.count { it.status != QueueStatus.SYNCED }
 
@@ -72,13 +74,13 @@ fun QueueScreen(repository: Repository, onBack: () -> Unit) {
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 IconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = strings.back)
                 }
                 Column(Modifier.weight(1f)) {
-                    Text("Visit queue", style = MaterialTheme.typography.titleMedium)
+                    Text(strings.queueTitle, style = MaterialTheme.typography.titleMedium)
                     Text(
-                        if (waiting == 0) "Everything is sent"
-                        else "$waiting waiting to be sent",
+                        if (waiting == 0) strings.queueAllSent
+                        else strings.queueWaiting(waiting),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -87,9 +89,8 @@ fun QueueScreen(repository: Repository, onBack: () -> Unit) {
 
             if (items.isEmpty()) {
                 EmptyState(
-                    title = "Nothing waiting",
-                    body = "Visits you record without a network are held here and " +
-                        "sent automatically once you are back in signal.",
+                    title = strings.queueNothingWaiting,
+                    body = strings.queueNothingWaitingBody,
                     icon = Icons.Default.CloudDone,
                 )
             } else {
@@ -99,8 +100,7 @@ fun QueueScreen(repository: Repository, onBack: () -> Unit) {
                 ) {
                     item {
                         Notice(
-                            "Visits are sent automatically. Nothing is lost if you " +
-                                "close the app or the phone restarts.",
+                            strings.queueExplainer,
                             tone = NoticeTone.INFO,
                         )
                     }
@@ -113,7 +113,7 @@ fun QueueScreen(repository: Repository, onBack: () -> Unit) {
                                 modifier = Modifier.fillMaxWidth(),
                             ) {
                                 Text(
-                                    if (syncing) "Sending…" else "Try sending now",
+                                    if (syncing) strings.sending else strings.trySendingNow,
                                     style = MaterialTheme.typography.labelLarge,
                                 )
                             }
@@ -129,18 +129,19 @@ fun QueueScreen(repository: Repository, onBack: () -> Unit) {
 @Composable
 private fun QueueCard(item: PendingVisit) {
     val palette = LocalRiskPalette.current
+    val strings = LocalStrings.current
     val (statusText, statusColor) = when (item.status) {
-        QueueStatus.PENDING -> "Waiting for network" to palette.grey
-        QueueStatus.UPLOADING -> "Sending…" to MaterialTheme.colorScheme.primary
-        QueueStatus.SYNCED -> "Sent" to palette.green
-        QueueStatus.FAILED -> "Will retry" to palette.amber
+        QueueStatus.PENDING -> strings.statusWaiting to palette.grey
+        QueueStatus.UPLOADING -> strings.statusSending to MaterialTheme.colorScheme.primary
+        QueueStatus.SYNCED -> strings.statusSent to palette.green
+        QueueStatus.FAILED -> strings.statusWillRetry to palette.amber
     }
 
     SectionCard(accent = if (item.status == QueueStatus.SYNCED) null else statusColor) {
         Row(verticalAlignment = Alignment.Top) {
             Column(Modifier.weight(1f)) {
                 Text(
-                    item.patientName.ifBlank { "Visit" },
+                    item.patientName.ifBlank { strings.recordVisitTitle },
                     style = MaterialTheme.typography.titleMedium,
                 )
                 Spacer(Modifier.height(2.dp))
@@ -167,10 +168,10 @@ private fun QueueCard(item: PendingVisit) {
         Text(
             when {
                 item.audioPath != null && item.transcript.isNullOrBlank() ->
-                    "Voice recording, to be transcribed on the server"
+                    strings.queueVoiceRecording
                 !item.transcript.isNullOrBlank() -> "\"${item.transcript!!.take(110)}\""
                 !item.typedNotes.isNullOrBlank() -> item.typedNotes!!.take(110)
-                else -> "Measurements only"
+                else -> strings.queueMeasurementsOnly
             },
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -196,7 +197,7 @@ private fun QueueCard(item: PendingVisit) {
         if (item.status == QueueStatus.FAILED && item.lastError != null) {
             Spacer(Modifier.height(8.dp))
             Text(
-                "Attempt ${item.attempts}: ${item.lastError}",
+                strings.attemptLabel(item.attempts, item.lastError!!),
                 style = MaterialTheme.typography.bodySmall,
                 color = palette.amber,
             )

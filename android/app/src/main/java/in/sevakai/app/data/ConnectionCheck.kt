@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import `in`.sevakai.app.data.remote.HealthDto
+import `in`.sevakai.app.ui.i18n.Strings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
@@ -29,11 +30,8 @@ object ConnectionCheck {
             val guidelineChunks: Int,
             val patients: Int,
             val latencyMs: Long,
-        ) : Result {
-            override val message: String
-                get() = "Connected in ${latencyMs} ms · $patients patients · " +
-                    "$guidelineChunks guideline chunks"
-        }
+            override val message: String,
+        ) : Result
 
         data class Failed(
             override val message: String,
@@ -41,7 +39,11 @@ object ConnectionCheck {
         ) : Result
     }
 
-    suspend fun run(context: Context, url: String): Result = withContext(Dispatchers.IO) {
+    suspend fun run(
+        context: Context,
+        url: String,
+        strings: Strings,
+    ): Result = withContext(Dispatchers.IO) {
         val normalised = SettingsStore.normalise(url)
         val target = normalised.trimEnd('/') + "/api/health"
 
@@ -52,8 +54,8 @@ object ConnectionCheck {
             val loopback = normalised.contains("127.0.0.1") || normalised.contains("localhost")
             if (!loopback) {
                 return@withContext Result.Failed(
-                    "This phone has no network connection",
-                    "Turn on Wi-Fi, or connect by USB and use the \"USB cable\" preset.",
+                    strings.connNoNetwork,
+                    strings.connNoNetworkHint,
                 )
             }
         }
@@ -64,10 +66,8 @@ object ConnectionCheck {
             val emulator = SettingsStore.isEmulator()
             if (!emulator) {
                 return@withContext Result.Failed(
-                    "10.0.2.2 only works on the emulator",
-                    "On a real phone use the \"USB cable\" preset (with " +
-                        "adb reverse tcp:8010 tcp:8010), or enter your laptop's " +
-                        "Wi-Fi IP address.",
+                    strings.connEmulatorOnly,
+                    strings.connEmulatorOnlyHint,
                 )
             }
         }
@@ -83,9 +83,8 @@ object ConnectionCheck {
                 client.newCall(Request.Builder().url(target).build()).execute().use { response ->
                     if (!response.isSuccessful) {
                         return@use Result.Failed(
-                            "Server answered with HTTP ${response.code}",
-                            "Something is listening on that address, but it is not " +
-                                "the SevakAI backend.",
+                            strings.connHttpStatus(response.code),
+                            strings.connHttpStatusHint,
                         )
                     }
                     val body = response.body?.string().orEmpty()
@@ -94,43 +93,45 @@ object ConnectionCheck {
                             .decodeFromString<HealthDto>(body)
                     }.getOrNull()
                         ?: return@use Result.Failed(
-                            "Unexpected reply from that address",
-                            "Reachable, but it did not answer like the SevakAI backend.",
+                            strings.connUnexpectedReply,
+                            strings.connUnexpectedReplyHint,
                         )
 
+                    val elapsed = System.currentTimeMillis() - started
                     Result.Ok(
                         llmReady = health.llmReady,
                         guidelineChunks = health.guidelineChunks,
                         patients = health.patients,
-                        latencyMs = System.currentTimeMillis() - started,
+                        latencyMs = elapsed,
+                        message = strings.connOk(
+                            elapsed, health.patients, health.guidelineChunks,
+                        ),
                     )
                 }
             }
             result ?: Result.Failed(
-                "The server did not answer in time",
-                "It may be starting up, or blocked by a firewall.",
+                strings.connTimedOutSlow,
+                strings.connTimedOutSlowHint,
             )
         } catch (e: UnknownHostException) {
             Result.Failed(
-                "That address could not be found",
-                "Check the IP address is typed correctly.",
+                strings.connUnknownHost,
+                strings.connUnknownHostHint,
             )
         } catch (e: ConnectException) {
             Result.Failed(
-                "Nothing is listening on that address",
-                "Check the backend is running with --host 0.0.0.0, and that your " +
-                    "laptop firewall allows port 8010.",
+                strings.connRefused,
+                strings.connRefusedHint,
             )
         } catch (e: SocketTimeoutException) {
             Result.Failed(
-                "Timed out reaching the server",
-                "The phone and laptop may be on different networks, or a firewall " +
-                    "is dropping the connection.",
+                strings.connTimedOut,
+                strings.connTimedOutHint,
             )
         } catch (e: Exception) {
             Result.Failed(
                 e.message ?: e.javaClass.simpleName,
-                "Check the address and that the backend is running.",
+                strings.connGenericHint,
             )
         }
     }
