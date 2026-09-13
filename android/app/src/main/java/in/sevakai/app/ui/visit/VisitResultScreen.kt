@@ -253,6 +253,78 @@ fun VisitResultBody(
             }
         }
 
+        // --- Messages -------------------------------------------------------
+        // The worker is the sender of the referral, so she sees what went out
+        // in the family's own words. Shown with the simulation notice attached,
+        // never as a bare "sent" that would imply a family had been reached.
+        if (visit.messages.isNotEmpty()) {
+            item {
+                SectionCard {
+                    SectionLabel(strings.messagesSent)
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        strings.messagesSimulated,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    visit.messages.forEach { message ->
+                        Spacer(Modifier.height(14.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                when (message.messageType) {
+                                    "referral" -> strings.messageReferral
+                                    "escalation" -> strings.messageEscalation
+                                    else -> strings.messageReminder
+                                },
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                message.toName,
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        Spacer(Modifier.height(6.dp))
+                        Box(
+                            Modifier
+                                .fillMaxWidth()
+                                .clip(MaterialTheme.shapes.small)
+                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                                .padding(12.dp)
+                        ) {
+                            Text(
+                                message.body,
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
+                        }
+                        // An undeliverable message is the one a worker most
+                        // needs to notice: it is now her errand, not the
+                        // system's.
+                        val note = when {
+                            message.status == "no_contact" -> strings.messageNoPhone
+                            message.sendAfter != null && message.status == "scheduled" ->
+                                strings.messageHolds(message.sendAfter!!)
+                            else -> null
+                        }
+                        if (note != null) {
+                            Spacer(Modifier.height(6.dp))
+                            Text(
+                                note,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = if (message.status == "no_contact") {
+                                    MaterialTheme.colorScheme.error
+                                } else {
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                },
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
         // --- What was recorded ----------------------------------------------
         item {
             SectionCard {

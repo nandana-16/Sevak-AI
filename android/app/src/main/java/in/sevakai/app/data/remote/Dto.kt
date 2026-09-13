@@ -170,6 +170,28 @@ data class VisitDetailDto(
     @SerialName("degraded_steps") val degradedSteps: List<String> = emptyList(),
     @SerialName("processing_ms") val processingMs: Int? = null,
     @SerialName("error_message") val errorMessage: String? = null,
+    val messages: List<MessageDto> = emptyList(),
+)
+
+/**
+ * A message this visit produced - a referral to the family, an alert to the
+ * ANM, or a reminder for the follow-up.
+ *
+ * Delivery is simulated on the server: the wording, the language, the queue and
+ * the schedule are real, the final hop to WhatsApp is not. The app says so
+ * rather than letting a worker believe a family has been contacted.
+ */
+@Serializable
+data class MessageDto(
+    val id: String,
+    @SerialName("message_type") val messageType: String,
+    val status: String,
+    @SerialName("to_phone") val toPhone: String? = null,
+    @SerialName("to_name") val toName: String,
+    val body: String,
+    val language: String = "hi",
+    @SerialName("send_after") val sendAfter: String? = null,
+    val error: String? = null,
 )
 
 @Serializable

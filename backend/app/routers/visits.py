@@ -28,8 +28,21 @@ from app.core.config import settings
 from app.core.database import get_db
 from app.core.scoping import audit, get_patient_or_404
 from app.core.security import get_current_worker
-from app.models.db import InputMode, ScheduledVisit, ScheduleStatus, Visit, Worker
-from app.models.schemas import ActionOut, CitationOut, VisitCreate, VisitDetail
+from app.models.db import (
+    InputMode,
+    Message,
+    ScheduledVisit,
+    ScheduleStatus,
+    Visit,
+    Worker,
+)
+from app.models.schemas import (
+    ActionOut,
+    CitationOut,
+    MessageOut,
+    VisitCreate,
+    VisitDetail,
+)
 from app.services import stt, visit_service
 
 log = logging.getLogger("sevakai.api.visits")
@@ -61,6 +74,20 @@ def _to_detail(db: Session, visit: Visit) -> VisitDetail:
     detail.recommended_actions = [
         ActionOut.model_validate(a) for a in (visit.recommended_actions or [])
     ]
+    # The messages this visit produced. Returned on the visit itself rather than
+    # behind a second request: the worker is the sender, and she should see what
+    # went out to the family while she is still standing in their house.
+    messages = db.scalars(
+        select(Message)
+        .where(Message.visit_id == visit.id)
+        .order_by(Message.created_at)
+    ).all()
+    detail.messages = []
+    for message in messages:
+        item = MessageOut.model_validate(message)
+        item.message_type = message.message_type.value
+        item.status = message.status.value
+        detail.messages.append(item)
     return detail
 
 

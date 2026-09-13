@@ -235,6 +235,8 @@ class VisitDetail(VisitSummary):
     degraded_steps: list[str] = []
     processing_ms: int | None = None
     error_message: str | None = None
+    # What this visit sent, and to whom. Defined below; resolved on rebuild.
+    messages: list["MessageOut"] = []
 
 
 # --- Schedule ---------------------------------------------------------------

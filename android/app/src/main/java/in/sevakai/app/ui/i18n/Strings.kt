@@ -190,6 +190,17 @@ interface Strings {
     val whatToDoNow: String
     val nextVisit: String
     val nextVisitAuto: String
+
+    // Messages sent as a result of the visit. `messagesSimulated` is not
+    // optional politeness - a worker must never be left believing a family was
+    // contacted when nothing was actually delivered.
+    val messagesSent: String
+    val messagesSimulated: String
+    val messageReferral: String
+    val messageEscalation: String
+    val messageReminder: String
+    val messageNoPhone: String
+    fun messageHolds(date: String): String
     val recordedInThisVisit: String
     val noFindings: String
     val basedOnGuidelines: String
