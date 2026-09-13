@@ -75,6 +75,7 @@ python -m scripts.test_risk_downgrade # risk moves both directions, not just up
 python -m scripts.test_escalations    # one open alert per patient, not duplicates
 python -m scripts.test_dashboard      # supervisor scoping: ANM vs BMO boundaries
 python -m scripts.test_messages       # the outbox: who gets told, and who cannot
+python -m scripts.test_glossary       # danger signs read in Hindi (no API needed)
 python -m scripts.try_pipeline        # run the agents directly, for prompt tuning
 ```
 
@@ -223,6 +224,21 @@ union, so the hierarchy is demonstrable rather than merely asserted.
 ---
 
 ## Design decisions worth knowing
+
+**Danger signs are translated deterministically, not just prompted for.** The
+risk prompt asks for `danger_signs` in Hindi and names the field explicitly,
+and the model still returns the prose in Hindi and the list in English on some
+visits - putting "pedal oedema" in the middle of an otherwise Hindi alert to the
+ANM. Prompting harder had already been tried, so there is a glossary underneath
+it: a known sign is rendered in Hindi, an unknown one is left in English rather
+than half-translated, and anything the model got right passes through untouched.
+`BP 168/112` and `Hb 6.2 g/dL` stay in Latin script deliberately - that is what
+her registers use. The same table, read backwards, lets the model's English and
+the rule engine's Hindi for one finding be recognised as the same sign instead
+of both being shown.
+
+`scripts/test_glossary` covers this offline, on purpose: a live visit mostly
+exercises the model getting it right, and proves nothing about the fallback.
 
 **Aadhaar is verified offline, not through UIDAI.** Live e-KYC is available
 only to licensed AUA/KUA entities; there is no public API and no legitimate way

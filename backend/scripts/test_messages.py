@@ -14,6 +14,7 @@ Run:  python -m scripts.test_messages
 
 from __future__ import annotations
 
+import re
 import sys
 import uuid
 import warnings
@@ -72,6 +73,18 @@ def record(client: httpx.Client, patient: dict, notes: str, language: str = "en"
 def outbox(client: httpx.Client, **params) -> dict:
     return client.get("/api/messages", params={"limit": 200, **params}).json()
 
+
+HINDI_RED_SPEECH = (
+    "बहुत तेज़ सर दर्द है, आँखों के आगे धुंधला दिख रहा है, पैरों में बहुत सूजन है। "
+    "बीपी एक सौ बहत्तर बटा एक सौ चौदह।"
+)
+# Abbreviations and measurements stay in Latin script on purpose - they are
+# what an ASHA's registers already use, and "BP 172/114" reads the same either
+# way. Anything else Latin in a Hindi danger sign is the bug.
+ALLOWED_LATIN = {
+    "bp", "hb", "spo", "spo2", "muac", "anc", "ifa", "tt", "edd", "g", "dl",
+    "mg", "ml", "kg", "cm", "c", "f", "iu", "o2", "hiv", "tb", "ors",
+}
 
 RED_NOTES = (
     "Heavy bleeding since last night, severe abdominal pain, very pale and "
@@ -186,6 +199,59 @@ def main() -> int:
                   family[0]["status"] == "no_contact", family[0]["status"])
             check("and it says why, so the worker knows to deliver it by hand",
                   bool(family[0]["error"]), str(family[0]["error"]))
+
+    # --- Hindi output --------------------------------------------------------
+    # The risk prompt asks for danger_signs in Hindi and the model returns them
+    # in English on some visits anyway, which used to put "pedal oedema" in the
+    # middle of a Hindi alert to the ANM. Checked over several visits because
+    # the failure is intermittent by nature.
+    hindi_candidates = [p for p in candidates
+                        if p.get("phone") and p["category"] == "pregnant"][:3]
+    checked = 0
+    degraded = 0
+    for patient in hindi_candidates:
+        before = {m["id"] for m in outbox(anm)["messages"]}
+        visit = record(asha, patient, HINDI_RED_SPEECH, language="hi")
+        # A visit the model never saw proves nothing about the model's output.
+        # Groq's free tier has a daily token ceiling, and past it every visit
+        # comes back rules-only and green - which would read here as a failure
+        # of the translation rather than an exhausted quota.
+        if visit.get("degraded_steps"):
+            degraded += 1
+            continue
+        if not visit["danger_signs"]:
+            continue
+        checked += 1
+        stray = [
+            sign for sign in visit["danger_signs"]
+            if any(
+                word.lower() not in ALLOWED_LATIN
+                for word in re.findall(r"[A-Za-z]+", sign)
+            )
+        ]
+        check(f"Hindi visit {checked}: danger signs carry no stray English",
+              not stray, "; ".join(stray))
+
+        alerts = [m for m in outbox(anm)["messages"]
+                  if m["id"] not in before and m["message_type"] == "escalation"]
+        for alert in alerts:
+            signs_line = next(
+                (line for line in alert["body"].splitlines()
+                 if line.startswith("लक्षण:")), None,
+            )
+            if signs_line:
+                leftover = [
+                    word for word in re.findall(r"[A-Za-z]+", signs_line)
+                    if word.lower() not in ALLOWED_LATIN
+                ]
+                check(f"Hindi visit {checked}: the ANM alert reads in Hindi",
+                      not leftover, ", ".join(leftover))
+    if checked == 0 and degraded:
+        print(f"[ skip ] Hindi output unchecked - {degraded} visit(s) ran without the "
+              f"model (Groq quota). Run scripts.test_glossary, which needs no API.")
+    else:
+        check("at least one Hindi visit was exercised", checked > 0,
+              f"{checked} checked, {degraded} degraded")
 
     # --- Dispatch -----------------------------------------------------------
     result = anm.post("/api/messages/dispatch").json()

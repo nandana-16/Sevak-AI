@@ -16,7 +16,7 @@ from __future__ import annotations
 import logging
 import re
 
-from app.agents import prompts, rules
+from app.agents import glossary, prompts, rules
 from app.agents.llm import LLMUsage, get_llm
 from app.agents.state import PipelineState
 from app.models.db import PatientCategory, RiskLevel
@@ -168,6 +168,14 @@ def run(state: PipelineState, usage: LLMUsage) -> PipelineState:
     # Merge rule danger signs in, without duplicating what the model said.
     danger_signs = _dedupe_signs(danger_signs, rule_result.danger_signs)
 
+    # The prompt asks for these in Hindi and names the field explicitly, and
+    # the model still returns the prose translated and the list in English on
+    # some visits. Rather than prompt harder, normalise here: a known sign is
+    # rendered in Hindi, an unknown one is left in English rather than mangled,
+    # and anything the model already got right passes through untouched.
+    if (state.get("language") or "en").startswith("hi"):
+        danger_signs = [glossary.to_hindi(sign) for sign in danger_signs]
+
     # Keep only the excerpts the model actually cited, when it named any.
     if cited_indices:
         kept = [
@@ -201,8 +209,13 @@ def _sign_key(text: str) -> frozenset[str]:
     feed" against "unable to drink or feed", "Severe anemia (Hb < 7 g/dL)"
     against "Severe anaemia (Hb 6.2 g/dL)". Showing both to a worker is noise,
     so compare on meaningful words with spellings and numbers normalised away.
+
+    On a Hindi visit the two can also differ by *language* - the model returns
+    "blurred vision" while the rule engine has already produced the Hindi label
+    for the same finding. Keying through the glossary maps a known Hindi sign
+    back to its English name first, so those collide instead of both showing.
     """
-    lowered = re.sub(r"[^a-z ]+", " ", text.lower())
+    lowered = re.sub(r"[^a-z ]+", " ", glossary.canonical(text).lower())
     lowered = lowered.replace("anaemia", "anemia").replace("oedema", "edema")
     words = {w for w in lowered.split() if len(w) > 2 and w not in _STOPWORDS}
     if not words:
