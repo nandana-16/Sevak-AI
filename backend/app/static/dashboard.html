@@ -1,0 +1,402 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SevakAI — Supervisor</title>
+<style>
+  /* Same palette as the phone app: green carries identity, black and white
+     carry structure, and saturated colour is reserved for the risk levels. */
+  :root {
+    --green:#1B7A43; --green-dark:#12572F; --green-tint:#E6F2EA;
+    --ink:#0E1210; --muted:#5A635E; --paper:#fff; --sunk:#F4F7F5;
+    --line:#DCE4DE;
+    --red:#C62828; --red-tint:#FDECEC;
+    --amber:#9A6700; --amber-tint:#FDF4E3;
+    --radius:14px;
+  }
+  * { box-sizing:border-box; }
+  body {
+    margin:0; background:var(--sunk); color:var(--ink);
+    font:15px/1.5 "Segoe UI", Roboto, system-ui, sans-serif;
+  }
+  a { color:var(--green); }
+  .hidden { display:none !important; }
+
+  /* --- login ------------------------------------------------------------ */
+  #login { max-width:380px; margin:12vh auto; padding:32px; background:var(--paper);
+           border:1px solid var(--line); border-radius:var(--radius); }
+  #login h1 { margin:0 0 4px; font-size:26px; letter-spacing:-.4px; }
+  #login p.sub { margin:0 0 24px; color:var(--muted); font-size:14px; }
+  .mark { width:52px; height:52px; border-radius:15px; background:var(--green);
+          display:grid; place-items:center; margin-bottom:16px; }
+  .mark svg { width:32px; height:32px; }
+  label { display:block; font-size:13px; color:var(--muted); margin:14px 0 5px; }
+  input { width:100%; padding:11px 12px; font-size:16px; border:1px solid var(--line);
+          border-radius:8px; background:var(--paper); color:var(--ink); }
+  input:focus { outline:2px solid var(--green); outline-offset:-1px; border-color:transparent; }
+  button { font:inherit; cursor:pointer; border:none; border-radius:8px; }
+  .primary { background:var(--green); color:#fff; padding:12px 18px; font-weight:600;
+             width:100%; margin-top:20px; font-size:16px; }
+  .primary:disabled { background:#c8d3cc; cursor:default; }
+  .hint { margin-top:18px; font-size:12.5px; color:var(--muted); text-align:center; line-height:1.7; }
+  .err { margin-top:14px; background:var(--amber-tint); color:var(--amber);
+         padding:10px 12px; border-radius:8px; font-size:13.5px; }
+
+  /* --- shell ------------------------------------------------------------ */
+  header { background:var(--paper); border-bottom:1px solid var(--line);
+           padding:14px 24px; display:flex; align-items:center; gap:14px; }
+  header .mark { width:34px; height:34px; border-radius:10px; margin:0; }
+  header .mark svg { width:21px; height:21px; }
+  header h1 { font-size:17px; margin:0; font-weight:600; }
+  header .scope { font-size:13px; color:var(--muted); }
+  header .spacer { flex:1; }
+  .role-badge { background:var(--green-tint); color:var(--green-dark); font-size:12px;
+                font-weight:600; padding:4px 10px; border-radius:99px; letter-spacing:.3px; }
+  .ghost { background:transparent; color:var(--muted); padding:8px 12px; font-size:14px; }
+  .ghost:hover { color:var(--ink); }
+
+  main { padding:22px 24px 60px; max-width:1180px; margin:0 auto; }
+  h2 { font-size:13px; text-transform:uppercase; letter-spacing:.8px;
+       color:var(--muted); margin:30px 0 12px; font-weight:600; }
+
+  /* --- cards ------------------------------------------------------------ */
+  .cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(178px,1fr)); gap:12px; }
+  .card { background:var(--paper); border:1px solid var(--line); border-radius:var(--radius);
+          padding:16px 18px; }
+  .card .n { font-size:31px; font-weight:600; letter-spacing:-1px; line-height:1.15; }
+  .card .k { font-size:13px; color:var(--muted); margin-top:2px; }
+  .card .note { font-size:12.5px; margin-top:7px; }
+  .card.alert { border-color:var(--red); }
+  .card.alert .n { color:var(--red); }
+  .card.warn { border-color:var(--amber); }
+  .card.warn .n { color:var(--amber); }
+
+  /* --- risk bar --------------------------------------------------------- */
+  .bar { display:flex; height:26px; border-radius:8px; overflow:hidden; border:1px solid var(--line); }
+  .bar div { display:grid; place-items:center; font-size:12px; font-weight:600; color:#fff; }
+  .legend { display:flex; gap:18px; margin-top:9px; font-size:13px; color:var(--muted);
+            flex-wrap:wrap; }
+  .dot { display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:6px; }
+
+  /* --- tables ----------------------------------------------------------- */
+  table { width:100%; border-collapse:collapse; background:var(--paper);
+          border:1px solid var(--line); border-radius:var(--radius); overflow:hidden; }
+  th, td { padding:11px 14px; text-align:left; font-size:14px;
+           border-bottom:1px solid var(--line); }
+  th { font-size:12px; text-transform:uppercase; letter-spacing:.5px; color:var(--muted);
+       background:var(--sunk); font-weight:600; }
+  tbody tr:last-child td { border-bottom:none; }
+  td.num, th.num { text-align:right; font-variant-numeric:tabular-nums; }
+  .pill { display:inline-block; padding:2px 9px; border-radius:99px; font-size:12px;
+          font-weight:600; }
+  .pill.red { background:var(--red-tint); color:var(--red); }
+  .pill.amber { background:var(--amber-tint); color:var(--amber); }
+  .pill.green { background:var(--green-tint); color:var(--green-dark); }
+  .zero { color:#b6bfb9; }
+  .ack { background:var(--green); color:#fff; padding:6px 12px; font-size:13px; }
+  .ack:disabled { background:#c8d3cc; }
+  .empty { padding:26px; text-align:center; color:var(--muted); background:var(--paper);
+           border:1px solid var(--line); border-radius:var(--radius); font-size:14px; }
+  .reason { color:var(--muted); font-size:13px; max-width:420px; }
+  .stale { color:var(--red); font-weight:600; }
+  footer { margin-top:34px; font-size:12.5px; color:var(--muted); text-align:center; }
+</style>
+</head>
+<body>
+
+<!-- ------------------------------------------------------------------ login -->
+<div id="login">
+  <div class="mark">
+    <svg viewBox="0 0 108 108" xmlns="http://www.w3.org/2000/svg">
+      <path fill="#fff" d="M54,20 L83,31 L83,55 C83,71 71,83 54,90 C37,83 25,71 25,55 L25,31 Z"/>
+      <path fill="#1B7A43" d="M48,38 h12 v10 h10 v12 h-10 v10 h-12 v-10 h-10 v-12 h10 Z"/>
+    </svg>
+  </div>
+  <h1>SevakAI</h1>
+  <p class="sub">Supervisor dashboard — ANM and BMO</p>
+  <label for="phone">Phone number</label>
+  <input id="phone" type="tel" inputmode="numeric" autocomplete="username" placeholder="9000000001">
+  <label for="pin">PIN</label>
+  <input id="pin" type="password" inputmode="numeric" autocomplete="current-password">
+  <div id="loginErr" class="err hidden"></div>
+  <button id="loginBtn" class="primary">Sign in</button>
+  <p class="hint">
+    ANM &nbsp;9000000001&nbsp;·&nbsp;PIN 1234<br>
+    BMO &nbsp;9000000000&nbsp;·&nbsp;PIN 1234
+  </p>
+</div>
+
+<!-- -------------------------------------------------------------- dashboard -->
+<div id="app" class="hidden">
+  <header>
+    <div class="mark">
+      <svg viewBox="0 0 108 108" xmlns="http://www.w3.org/2000/svg">
+        <path fill="#fff" d="M54,20 L83,31 L83,55 C83,71 71,83 54,90 C37,83 25,71 25,55 L25,31 Z"/>
+        <path fill="#1B7A43" d="M48,38 h12 v10 h10 v12 h-10 v10 h-12 v-10 h-10 v-12 h10 Z"/>
+      </svg>
+    </div>
+    <div>
+      <h1 id="who"></h1>
+      <div class="scope" id="scope"></div>
+    </div>
+    <span class="role-badge" id="roleBadge"></span>
+    <div class="spacer"></div>
+    <button class="ghost" id="refresh">Refresh</button>
+    <button class="ghost" id="signout">Sign out</button>
+  </header>
+
+  <main>
+    <div class="cards" id="cards"></div>
+
+    <h2>Risk across <span id="scopeInline"></span></h2>
+    <div class="bar" id="riskBar"></div>
+    <div class="legend" id="riskLegend"></div>
+
+    <h2>Open escalations</h2>
+    <div id="escalations"></div>
+
+    <h2 id="workersHeading">Field workers</h2>
+    <div id="workers"></div>
+
+    <h2>Areas</h2>
+    <div id="areas"></div>
+
+    <footer id="footer"></footer>
+  </main>
+</div>
+
+<script>
+// The dashboard is served by the same origin as the API, so relative paths
+// work whether this is reached over localhost, adb reverse, or a LAN address.
+const API = "";
+let token = sessionStorage.getItem("sevakai_token") || null;
+let me = null;
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c =>
+  ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+async function api(path, options = {}) {
+  const response = await fetch(API + path, {
+    ...options,
+    headers: { "Content-Type": "application/json",
+               ...(token ? { Authorization: "Bearer " + token } : {}),
+               ...(options.headers || {}) },
+  });
+  if (response.status === 401) { signOut(); throw new Error("Session expired"); }
+  if (response.status === 403) {
+    throw new Error("This account is not a supervisor. Sign in as an ANM or BMO.");
+  }
+  if (!response.ok) throw new Error("HTTP " + response.status);
+  return response.json();
+}
+
+// ----------------------------------------------------------------- sign in
+async function signIn() {
+  const phone = $("phone").value.trim(), pin = $("pin").value.trim();
+  const err = $("loginErr");
+  err.classList.add("hidden");
+  $("loginBtn").disabled = true;
+  try {
+    const response = await fetch(API + "/api/auth/login", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phone, pin }),
+    });
+    if (!response.ok) throw new Error("Incorrect phone number or PIN.");
+    const data = await response.json();
+    if (!["anm", "bmo", "admin"].includes(data.worker.role)) {
+      throw new Error("That is a field worker account. Use the phone app, or "
+                    + "sign in as an ANM or BMO.");
+    }
+    token = data.access_token;
+    sessionStorage.setItem("sevakai_token", token);
+    await load();
+  } catch (e) {
+    err.textContent = e.message;
+    err.classList.remove("hidden");
+  } finally {
+    $("loginBtn").disabled = false;
+  }
+}
+
+function signOut() {
+  token = null; me = null;
+  sessionStorage.removeItem("sevakai_token");
+  $("app").classList.add("hidden");
+  $("login").classList.remove("hidden");
+}
+
+// ------------------------------------------------------------------- render
+function card(n, label, note = "", cls = "") {
+  return `<div class="card ${cls}"><div class="n">${n}</div>
+          <div class="k">${label}</div>${note ? `<div class="note">${note}</div>` : ""}</div>`;
+}
+
+function renderSummary(s) {
+  $("scope").textContent = s.scope_label;
+  $("scopeInline").textContent = s.scope_label;
+  $("roleBadge").textContent = s.role.toUpperCase();
+  // A BMO supervises ANMs who supervise workers; naming the level makes the
+  // two dashboards distinguishable at a glance.
+  $("workersHeading").textContent =
+    s.role === "bmo" ? "Field workers across the block" : "My field workers";
+
+  const stale = s.stale_escalations
+    ? `<span class="stale">${s.stale_escalations} unactioned &gt; 2 days</span>` : "";
+  $("cards").innerHTML = [
+    card(s.total_patients, "Patients", `${s.field_workers} field workers`),
+    card(s.red, "High risk", "need a facility today",
+         s.red ? "alert" : ""),
+    card(s.open_escalations, "Open escalations", stale,
+         s.stale_escalations ? "alert" : (s.open_escalations ? "warn" : "")),
+    card(s.overdue_visits, "Overdue visits", `${s.due_today} due today`,
+         s.overdue_visits ? "warn" : ""),
+    card(s.visits_in_window, `Visits · last ${s.window_days} days`,
+         `${s.visits_today} today`),
+    // Surfaced rather than hidden: a supervisor should know how much of what
+    // they are reading came from rules because the model was unavailable.
+    card(s.degraded_visits, "Rule-only results",
+         s.degraded_visits ? "AI was unavailable" : "all AI-assessed",
+         s.degraded_visits ? "warn" : ""),
+  ].join("");
+
+  const total = Math.max(1, s.red + s.yellow + s.green + s.unknown);
+  const seg = (n, colour, label) => n
+    ? `<div style="width:${(n / total) * 100}%;background:${colour}"
+        title="${label}: ${n}">${(n / total) > 0.06 ? n : ""}</div>` : "";
+  $("riskBar").innerHTML =
+      seg(s.red, "var(--red)", "High risk")
+    + seg(s.yellow, "var(--amber)", "Watch")
+    + seg(s.green, "var(--green)", "Healthy")
+    + seg(s.unknown, "#b6bfb9", "Not assessed");
+  $("riskLegend").innerHTML = [
+    ["var(--red)", "High risk", s.red],
+    ["var(--amber)", "Watch", s.yellow],
+    ["var(--green)", "Healthy", s.green],
+    ["#b6bfb9", "Not assessed", s.unknown],
+  ].map(([c, l, n]) =>
+    `<span><span class="dot" style="background:${c}"></span>${l} — ${n}</span>`).join("");
+}
+
+function renderEscalations(rows) {
+  if (!rows.length) {
+    $("escalations").innerHTML =
+      `<div class="empty">Nothing open. Every high-risk visit has been signed off.</div>`;
+    return;
+  }
+  const now = Date.now();
+  $("escalations").innerHTML = `<table><thead><tr>
+      <th>Patient</th><th>Raised by</th><th>When</th><th>Why</th><th></th>
+    </tr></thead><tbody>` + rows.map(r => {
+      const raised = new Date(r.raised_at + (r.raised_at.endsWith("Z") ? "" : "Z"));
+      const days = Math.floor((now - raised) / 86400000);
+      const age = days >= 1
+        ? `<span class="${days >= 2 ? "stale" : ""}">${days} day${days > 1 ? "s" : ""} ago</span>`
+        : "today";
+      return `<tr>
+        <td><strong>${esc(r.patient_name)}</strong></td>
+        <td>${esc(r.worker_name)}</td>
+        <td>${age}</td>
+        <td class="reason">${esc(r.reason).slice(0, 180)}</td>
+        <td><button class="ack" data-id="${r.id}">Acknowledge</button></td>
+      </tr>`;
+    }).join("") + `</tbody></table>`;
+
+  document.querySelectorAll(".ack").forEach(button => {
+    button.onclick = async () => {
+      button.disabled = true; button.textContent = "…";
+      try {
+        await api(`/api/escalations/${button.dataset.id}/acknowledge`, { method: "POST" });
+        await load();
+      } catch (e) { button.disabled = false; button.textContent = "Acknowledge"; }
+    };
+  });
+}
+
+const numCell = (n, cls = "") =>
+  `<td class="num ${n ? cls : "zero"}">${n}</td>`;
+
+function renderWorkers(rows) {
+  if (!rows.length) { $("workers").innerHTML = `<div class="empty">No field workers.</div>`; return; }
+  $("workers").innerHTML = `<table><thead><tr>
+      <th>Worker</th><th>Area</th>
+      <th class="num">Patients</th><th class="num">High risk</th><th class="num">Watch</th>
+      <th class="num">Visits</th><th class="num">Overdue</th><th class="num">Escalations</th>
+      <th>Last activity</th>
+    </tr></thead><tbody>` + rows.map(r => {
+      const quiet = r.days_since_last_visit;
+      const last = quiet === null
+        ? `<span class="stale">no visits recorded</span>`
+        : quiet >= 3
+          ? `<span class="stale">${quiet} days ago</span>`
+          : quiet === 0 ? "today" : `${quiet} day${quiet > 1 ? "s" : ""} ago`;
+      return `<tr>
+        <td><strong>${esc(r.name)}</strong><br><span class="scope">${esc(r.phone)}</span></td>
+        <td>${esc(r.village || "—")}</td>
+        ${numCell(r.patients)}
+        ${numCell(r.red_patients, "stale")}
+        ${numCell(r.yellow_patients)}
+        ${numCell(r.visits_in_window)}
+        ${numCell(r.overdue_visits, "stale")}
+        ${numCell(r.open_escalations, "stale")}
+        <td>${last}</td></tr>`;
+    }).join("") + `</tbody></table>`;
+}
+
+function renderAreas(rows) {
+  if (!rows.length) { $("areas").innerHTML = `<div class="empty">No areas.</div>`; return; }
+  $("areas").innerHTML = `<table><thead><tr>
+      <th>Village</th><th class="num">Patients</th><th class="num">High risk</th>
+      <th class="num">Watch</th><th class="num">Overdue</th>
+      <th class="num">Pregnant</th><th class="num">Infants</th><th>Status</th>
+    </tr></thead><tbody>` + rows.map(r => {
+      const status = r.red ? `<span class="pill red">Needs attention</span>`
+                   : r.overdue_visits ? `<span class="pill amber">Visits overdue</span>`
+                   : `<span class="pill green">On track</span>`;
+      return `<tr><td><strong>${esc(r.village)}</strong></td>
+        ${numCell(r.patients)}${numCell(r.red, "stale")}${numCell(r.yellow)}
+        ${numCell(r.overdue_visits, "stale")}${numCell(r.pregnant)}${numCell(r.infants)}
+        <td>${status}</td></tr>`;
+    }).join("") + `</tbody></table>`;
+}
+
+// --------------------------------------------------------------------- load
+async function load() {
+  try {
+    const [worker, summary, workers, areas, escalations] = await Promise.all([
+      api("/api/auth/me"),
+      api("/api/dashboard/summary"),
+      api("/api/dashboard/workers"),
+      api("/api/dashboard/areas"),
+      api("/api/escalations"),
+    ]);
+    me = worker;
+    $("who").textContent = worker.name;
+    renderSummary(summary);
+    renderEscalations(escalations);
+    renderWorkers(workers);
+    renderAreas(areas);
+    $("footer").textContent =
+      `Updated ${new Date().toLocaleTimeString()} · showing only ${summary.scope_label}`;
+    $("login").classList.add("hidden");
+    $("app").classList.remove("hidden");
+  } catch (e) {
+    if (token) {
+      $("loginErr").textContent = e.message;
+      $("loginErr").classList.remove("hidden");
+    }
+    signOut();
+  }
+}
+
+$("loginBtn").onclick = signIn;
+$("pin").addEventListener("keydown", e => { if (e.key === "Enter") signIn(); });
+$("phone").addEventListener("keydown", e => { if (e.key === "Enter") $("pin").focus(); });
+$("refresh").onclick = load;
+$("signout").onclick = signOut;
+
+if (token) load(); else $("login").classList.remove("hidden");
+</script>
+</body>
+</html>

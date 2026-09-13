@@ -68,6 +68,7 @@ Verify everything is wired:
 python -m scripts.smoke_test          # 40 checks over the whole worker journey
 python -m scripts.test_risk_downgrade # risk moves both directions, not just up
 python -m scripts.test_escalations    # one open alert per patient, not duplicates
+python -m scripts.test_dashboard      # supervisor scoping: ANM vs BMO boundaries
 python -m scripts.try_pipeline        # run the agents directly, for prompt tuning
 ```
 
@@ -150,12 +151,37 @@ and is safe to re-run between rehearsals.
 to tap, what to say, what can break, and what to answer when someone challenges
 the Aadhaar design.
 
+### Supervisor dashboard
+
+A web dashboard for **ANMs** and **BMOs**, served by the backend itself at
+**<http://localhost:8010/dashboard>** — no build step, no separate host.
+
+| | ANM | BMO |
+|---|---|---|
+| Scope | the ASHAs she supervises | every worker in the block |
+| Question it answers | "who needs me today?" | "which areas are drifting?" |
+| Scoped by | reporting line | geography |
+
+A BMO is scoped by **block, not reporting line**: PHCs and ANMs get
+reorganised, and a dashboard that silently lost half a block after a transfer
+would be worse than useless.
+
+Both see risk distribution, open escalations (with a count of any left
+unactioned more than two days), per-worker activity, and a village roll-up.
+Escalations can be acknowledged from the dashboard. Field workers are refused
+(403) — they use the phone app.
+
 ### Demo sign-in
 
-| Phone | PIN | Role |
-|---|---|---|
-| `9000000002` | `1234` | ASHA (Sunita Devi, Bagru — 40 patients) |
-| `9000000001` | `1234` | ANM supervisor (sees her four workers' rosters) |
+| Phone | PIN | Role | Sees |
+|---|---|---|---|
+| `9000000002` | `1234` | ASHA — Sunita Devi | her own ~43 patients (phone app) |
+| `9000000001` | `1234` | ANM — Dr. Anita Meena | Sanganer PHC: 2 workers, ~83 patients |
+| `9000000006` | `1234` | ANM — Dr. Priya Yadav | Phagi PHC: 2 workers, ~75 patients |
+| `9000000000` | `1234` | BMO — Dr. Rajesh Sharma | Sanganer block: all 4 workers, ~158 |
+
+The two ANM scopes are deliberately disjoint and the BMO's is exactly their
+union, so the hierarchy is demonstrable rather than merely asserted.
 
 ---
 

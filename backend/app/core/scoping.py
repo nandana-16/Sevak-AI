@@ -21,6 +21,16 @@ def visible_worker_ids(db: Session, worker: Worker) -> list[str] | None:
     """Worker ids whose patients this user may see. None means 'all'."""
     if worker.role == Role.admin:
         return None
+    if worker.role == Role.bmo:
+        # A BMO oversees a block, not a fixed reporting line - PHCs and their
+        # ANMs get reorganised, and a dashboard that silently lost half a block
+        # after a transfer would be worse than useless. Scope on geography.
+        return db.scalars(
+            select(Worker.id).where(
+                Worker.block == worker.block,
+                Worker.active.is_(True),
+            )
+        ).all()
     if worker.role == Role.anm:
         reports = db.scalars(
             select(Worker.id).where(Worker.supervisor_id == worker.id)

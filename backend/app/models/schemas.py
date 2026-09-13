@@ -274,6 +274,53 @@ class EscalationOut(ORMModel):
     resolution_note: str | None = None
 
 
+# --- Dashboard --------------------------------------------------------------
+
+class DashboardSummary(BaseModel):
+    role: str
+    scope_label: str
+    window_days: int
+    total_patients: int
+    red: int
+    yellow: int
+    green: int
+    unknown: int
+    field_workers: int
+    visits_in_window: int
+    visits_today: int
+    failed_visits: int
+    degraded_visits: int
+    open_escalations: int
+    stale_escalations: int
+    overdue_visits: int
+    due_today: int
+
+
+class WorkerPerformanceRow(BaseModel):
+    worker_id: str
+    name: str
+    phone: str
+    village: str | None = None
+    patients: int
+    red_patients: int
+    yellow_patients: int
+    visits_in_window: int
+    overdue_visits: int
+    open_escalations: int
+    last_visit_at: datetime | None = None
+    days_since_last_visit: int | None = None
+
+
+class BlockAreaRow(BaseModel):
+    village: str
+    patients: int
+    red: int
+    yellow: int
+    overdue_visits: int
+    pregnant: int
+    infants: int
+
+
 # --- Misc -------------------------------------------------------------------
 
 class GuidelineSourceOut(BaseModel):

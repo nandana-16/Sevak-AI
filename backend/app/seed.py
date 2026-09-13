@@ -116,27 +116,55 @@ def reset(db) -> None:
 
 
 def make_workers(db) -> list[Worker]:
-    supervisor = Worker(
-        name="Dr. Anita Meena",
-        phone="9000000001",
+    # Block Medical Officer. Scoped by block rather than by reporting line,
+    # so he sees every worker in Sanganer without needing each one wired to
+    # him individually.
+    bmo = Worker(
+        name="Dr. Rajesh Sharma",
+        phone="9000000000",
         pin_hash=hash_pin("1234"),
-        role=Role.anm,
-        village="Sanganer PHC",
+        role=Role.bmo,
+        village=None,
         block=BLOCK,
         district=DISTRICT,
         state="Rajasthan",
-        preferred_language="hi",
+        preferred_language="en",
     )
-    db.add(supervisor)
+    db.add(bmo)
+    db.flush()
+
+    # Two ANMs, each running a PHC, both under the BMO. With a single ANM the
+    # BMO's block scope and her reporting line cover exactly the same people,
+    # which makes the hierarchy impossible to show - and hides the bug where a
+    # supervisor sees more than they should.
+    anms = []
+    for name, phone, phc, language in [
+        ("Dr. Anita Meena", "9000000001", "Sanganer PHC", "hi"),
+        ("Dr. Priya Yadav", "9000000006", "Phagi PHC", "hi"),
+    ]:
+        anm = Worker(
+            name=name,
+            phone=phone,
+            pin_hash=hash_pin("1234"),
+            role=Role.anm,
+            village=phc,
+            block=BLOCK,
+            district=DISTRICT,
+            state="Rajasthan",
+            supervisor_id=bmo.id,
+            preferred_language=language,
+        )
+        db.add(anm)
+        anms.append(anm)
     db.flush()
 
     workers = []
-    for index, (name, village) in enumerate(
+    for index, (name, village, anm) in enumerate(
         [
-            ("Sunita Devi", "Bagru"),
-            ("Kamla Sharma", "Chaksu"),
-            ("Rekha Meena", "Phagi"),
-            ("Pushpa Gurjar", "Madhorajpur"),
+            ("Sunita Devi", "Bagru", anms[0]),
+            ("Kamla Sharma", "Chaksu", anms[0]),
+            ("Rekha Meena", "Phagi", anms[1]),
+            ("Pushpa Gurjar", "Madhorajpur", anms[1]),
         ],
         start=2,
     ):
@@ -149,7 +177,7 @@ def make_workers(db) -> list[Worker]:
             block=BLOCK,
             district=DISTRICT,
             state="Rajasthan",
-            supervisor_id=supervisor.id,
+            supervisor_id=anm.id,
             preferred_language="hi",
         )
         db.add(worker)
@@ -326,7 +354,10 @@ def make_history(db, patient: Patient, worker: Worker) -> None:
     last_visit: Visit | None = None
 
     for index in range(count):
-        days_ago = 14 * (count - index) + rng.randint(0, 6)
+        # Space visits back in time, but land the most recent one inside
+        # the last few days so the dashboard's activity window has
+        # something in it.
+        days_ago = 9 * (count - index - 1) + rng.randint(0, 5)
         when = _now() - timedelta(days=days_ago)
         level = rng.choices(
             [RiskLevel.green, RiskLevel.yellow, RiskLevel.red], weights=[68, 26, 6]
@@ -399,9 +430,7 @@ def seed(reset_first: bool = False) -> None:
             log.info("  %-16s %d patients", worker.name, len(worker.patients))
 
         db.commit()
-        log.info("Seeded %d workers and %d patients", len(workers) + 1, total)
-        log.info("Login: phone 9000000002 / PIN 1234  (ASHA Sunita Devi)")
-        log.info("       phone 9000000001 / PIN 1234  (ANM supervisor)")
+        log.info("Seeded %d workers and %d patients", len(workers) + 2, total)
     finally:
         db.close()
 

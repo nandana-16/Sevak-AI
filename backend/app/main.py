@@ -7,8 +7,10 @@ from __future__ import annotations
 
 import logging
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
+from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import func, select
 
@@ -17,7 +19,7 @@ from app.core.database import SessionLocal, init_db
 from app.models.db import Patient
 from app.models.schemas import GuidelineSourceOut, HealthResponse
 from app.rag import store
-from app.routers import auth, escalations, patients, schedule, visits
+from app.routers import auth, dashboard, escalations, patients, schedule, visits
 
 logging.basicConfig(
     level=logging.INFO,
@@ -70,6 +72,19 @@ app.include_router(patients.router)
 app.include_router(visits.router)
 app.include_router(schedule.router)
 app.include_router(escalations.router)
+app.include_router(dashboard.router)
+
+
+# The supervisor dashboard is a single static page served from the same origin
+# as the API, so it needs no build step, no separate host, and no CORS
+# exemption - and it reaches the backend at whatever address the browser used.
+DASHBOARD = Path(__file__).parent / "static" / "dashboard.html"
+
+
+@app.get("/", include_in_schema=False)
+@app.get("/dashboard", include_in_schema=False)
+def dashboard_page() -> FileResponse:
+    return FileResponse(DASHBOARD, media_type="text/html")
 
 
 @app.get("/api/health", response_model=HealthResponse, tags=["meta"])

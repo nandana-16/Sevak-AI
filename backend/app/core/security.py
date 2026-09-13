@@ -79,6 +79,6 @@ def get_current_worker(
 
 
 def require_supervisor(worker: Worker = Depends(get_current_worker)) -> Worker:
-    if worker.role not in (Role.anm, Role.admin):
+    if worker.role not in (Role.anm, Role.bmo, Role.admin):
         raise HTTPException(status_code=403, detail="Supervisor access required")
     return worker

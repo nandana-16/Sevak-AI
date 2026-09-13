@@ -49,7 +49,8 @@ class Base(DeclarativeBase):
 
 class Role(str, enum.Enum):
     asha = "asha"          # field worker
-    anm = "anm"            # auxiliary nurse midwife / supervisor
+    anm = "anm"            # auxiliary nurse midwife, supervises a few ASHAs
+    bmo = "bmo"            # block medical officer, oversees the whole block
     admin = "admin"
 
 
