@@ -29,7 +29,7 @@ object HindiStrings : Strings {
     override val riskGreenAction = "स्वस्थ है"
     override val riskUnknownAction = "जाँच नहीं हुई"
     override val riskRedShort = "ज़्यादा ख़तरा"
-    override val riskAmberShort = "ध्यान दें"
+    override val riskAmberShort = "मध्यम"
     override val riskGreenShort = "स्वस्थ"
     override val riskUnknownShort = "नया"
 
@@ -61,7 +61,7 @@ object HindiStrings : Strings {
     override val signOut = "साइन आउट"
     override val filterDueNow = "अभी बाकी"
     override val filterHighRisk = "ज़्यादा ख़तरा"
-    override val filterWatch = "ध्यान दें"
+    override val filterWatch = "मध्यम"
     override val patientCount = { n: Int -> "$n मरीज़" }
     override val loadingPatients = "आपके मरीज़ों की सूची आ रही है…"
     override val rosterOffline =

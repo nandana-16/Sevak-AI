@@ -19,7 +19,7 @@ object EnglishStrings : Strings {
     override val riskGreenAction = "Healthy"
     override val riskUnknownAction = "Not assessed"
     override val riskRedShort = "High risk"
-    override val riskAmberShort = "Watch"
+    override val riskAmberShort = "Medium"
     override val riskGreenShort = "Healthy"
     override val riskUnknownShort = "New"
 
@@ -51,7 +51,7 @@ object EnglishStrings : Strings {
     override val signOut = "Sign out"
     override val filterDueNow = "Due now"
     override val filterHighRisk = "High risk"
-    override val filterWatch = "Watch"
+    override val filterWatch = "Medium"
     override val patientCount = { n: Int -> "$n patient${if (n == 1) "" else "s"}" }
     override val loadingPatients = "Loading your patients…"
     override val rosterOffline = "You are offline. Showing the last saved copy of your roster."

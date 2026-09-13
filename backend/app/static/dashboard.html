@@ -267,12 +267,12 @@ function renderSummary(s) {
         title="${label}: ${n}">${(n / total) > 0.06 ? n : ""}</div>` : "";
   $("riskBar").innerHTML =
       seg(s.red, "var(--red)", "High risk")
-    + seg(s.yellow, "var(--amber)", "Watch")
+    + seg(s.yellow, "var(--amber)", "Medium")
     + seg(s.green, "var(--green)", "Healthy")
     + seg(s.unknown, "#b6bfb9", "Not assessed");
   $("riskLegend").innerHTML = [
     ["var(--red)", "High risk", s.red],
-    ["var(--amber)", "Watch", s.yellow],
+    ["var(--amber)", "Medium", s.yellow],
     ["var(--green)", "Healthy", s.green],
     ["#b6bfb9", "Not assessed", s.unknown],
   ].map(([c, l, n]) =>
@@ -321,7 +321,7 @@ function renderWorkers(rows) {
   if (!rows.length) { $("workers").innerHTML = `<div class="empty">No field workers.</div>`; return; }
   $("workers").innerHTML = `<table><thead><tr>
       <th>Worker</th><th>Area</th>
-      <th class="num">Patients</th><th class="num">High risk</th><th class="num">Watch</th>
+      <th class="num">Patients</th><th class="num">High risk</th><th class="num">Medium</th>
       <th class="num">Visits</th><th class="num">Overdue</th><th class="num">Escalations</th>
       <th>Last activity</th>
     </tr></thead><tbody>` + rows.map(r => {
@@ -348,7 +348,7 @@ function renderAreas(rows) {
   if (!rows.length) { $("areas").innerHTML = `<div class="empty">No areas.</div>`; return; }
   $("areas").innerHTML = `<table><thead><tr>
       <th>Village</th><th class="num">Patients</th><th class="num">High risk</th>
-      <th class="num">Watch</th><th class="num">Overdue</th>
+      <th class="num">Medium</th><th class="num">Overdue</th>
       <th class="num">Pregnant</th><th class="num">Infants</th><th>Status</th>
     </tr></thead><tbody>` + rows.map(r => {
       const status = r.red ? `<span class="pill red">Needs attention</span>`
