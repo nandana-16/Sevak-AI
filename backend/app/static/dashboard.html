@@ -60,6 +60,30 @@
   h2 { font-size:13px; text-transform:uppercase; letter-spacing:.8px;
        color:var(--muted); margin:30px 0 12px; font-weight:600; }
 
+  /* --- outbox ----------------------------------------------------------- */
+  /* Messages are shown as the family would see them, in full. A supervisor
+     checking why a household did not go to the PHC needs the actual words,
+     not a row saying "referral sent". */
+  .sim { background:var(--amber-tint); color:var(--amber); border-radius:8px;
+         padding:9px 12px; font-size:13px; margin-bottom:12px;
+         display:flex; align-items:center; gap:8px; }
+  .sim b { font-weight:600; }
+  .msg { background:var(--paper); border:1px solid var(--line);
+         border-radius:var(--radius); padding:14px 16px; margin-bottom:10px; }
+  .msg .head { display:flex; align-items:center; gap:9px; flex-wrap:wrap;
+               font-size:13px; color:var(--muted); margin-bottom:9px; }
+  .msg .head strong { color:var(--ink); font-size:14.5px; }
+  .msg .body { background:var(--green-tint); border-radius:10px;
+               padding:11px 13px; white-space:pre-wrap; font-size:14px;
+               line-height:1.6; max-width:560px; }
+  .msg .body.wait { background:var(--sunk); color:var(--muted); }
+  .msg .foot { font-size:12.5px; color:var(--muted); margin-top:8px; }
+  .outbox-head { display:flex; align-items:center; gap:12px; }
+  .outbox-head h2 { margin:30px 0 12px; }
+  .more { font-size:13px; color:var(--muted); padding:4px 2px 2px; }
+  .send { background:var(--green); color:#fff; padding:7px 13px; font-size:13px; }
+  .send:disabled { background:#c8d3cc; }
+
   /* --- cards ------------------------------------------------------------ */
   .cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(178px,1fr)); gap:12px; }
   .card { background:var(--paper); border:1px solid var(--line); border-radius:var(--radius);
@@ -155,6 +179,12 @@
 
     <h2>Open escalations</h2>
     <div id="escalations"></div>
+
+    <div class="outbox-head">
+      <h2>Messages to families</h2>
+      <button class="ghost" id="dispatch">Send everything due</button>
+    </div>
+    <div id="messages"></div>
 
     <h2 id="workersHeading">Field workers</h2>
     <div id="workers"></div>
@@ -314,6 +344,78 @@ function renderEscalations(rows) {
   });
 }
 
+const MSG_KIND = {
+  referral:   { label: "Referral",  who: "to the family" },
+  escalation: { label: "Alert",     who: "to the supervising ANM" },
+  reminder:   { label: "Reminder",  who: "to the family" },
+};
+
+function renderMessages(data) {
+  const rows = data.messages;
+  const banner = data.simulated
+    ? `<div class="sim"><b>Simulated.</b> These are written and queued exactly as
+       they would be sent, but nothing leaves this machine. Real delivery needs a
+       verified WhatsApp Business sender.</div>`
+    : "";
+
+  if (!rows.length) {
+    $("messages").innerHTML = banner +
+      `<div class="empty">No messages yet. They are written when a visit is recorded.</div>`;
+    return;
+  }
+
+  // Only the most recent few. The outbox grows by two or three messages per
+  // visit, and a supervisor should not have to scroll past a week of them to
+  // reach the workers table below.
+  const more = data.total - rows.length;
+  const note = more > 0
+    ? `<div class="more">The ${rows.length} most recent of ${data.total} messages.</div>`
+    : "";
+
+  $("messages").innerHTML = banner + rows.map(r => {
+    const kind = MSG_KIND[r.message_type] || { label: r.message_type, who: "" };
+    // A scheduled message whose date has arrived is ready, not waiting — the
+    // difference is what tells a supervisor whether the button does anything.
+    const today = new Date().toISOString().slice(0, 10);
+    const ready = !r.send_after || r.send_after <= today;
+    const pill = r.status === "sent" ? `<span class="pill green">Sent</span>`
+               : r.status === "no_contact" ? `<span class="pill amber">No phone — tell them in person</span>`
+               : r.status === "failed" ? `<span class="pill red">Failed</span>`
+               : ready ? `<span class="pill green">Ready to send</span>`
+               : `<span class="pill amber">Holds until ${r.send_after}</span>`;
+    // Sending is only offered where there is somewhere to send it.
+    // Greyed out only while it is genuinely holding for a future date.
+    const waiting = r.status === "scheduled" && !ready;
+    const action = (r.status === "scheduled" && r.to_phone)
+      ? `<button class="send" data-id="${r.id}">Send now</button>` : "";
+    const when = r.sent_at
+      ? `Sent ${new Date(r.sent_at + (r.sent_at.endsWith("Z") ? "" : "Z")).toLocaleString()}`
+      : `Written ${new Date(r.created_at + (r.created_at.endsWith("Z") ? "" : "Z")).toLocaleDateString()}`;
+
+    return `<div class="msg">
+      <div class="head">
+        <strong>${esc(r.to_name)}</strong>
+        <span>${esc(kind.label)} ${esc(kind.who)}</span>
+        ${r.to_phone ? `<span>· ${esc(r.to_phone)}</span>` : ""}
+        ${pill}
+        ${action}
+      </div>
+      <div class="body ${waiting ? "wait" : ""}">${esc(r.body)}</div>
+      <div class="foot">${when}${r.error ? " · " + esc(r.error) : ""}</div>
+    </div>`;
+  }).join("") + note;
+
+  document.querySelectorAll(".send").forEach(button => {
+    button.onclick = async () => {
+      button.disabled = true; button.textContent = "…";
+      try {
+        await api(`/api/messages/${button.dataset.id}/send`, { method: "POST" });
+        await load();
+      } catch (e) { button.disabled = false; button.textContent = "Send now"; }
+    };
+  });
+}
+
 const numCell = (n, cls = "") =>
   `<td class="num ${n ? cls : "zero"}">${n}</td>`;
 
@@ -364,17 +466,19 @@ function renderAreas(rows) {
 // --------------------------------------------------------------------- load
 async function load() {
   try {
-    const [worker, summary, workers, areas, escalations] = await Promise.all([
+    const [worker, summary, workers, areas, escalations, messages] = await Promise.all([
       api("/api/auth/me"),
       api("/api/dashboard/summary"),
       api("/api/dashboard/workers"),
       api("/api/dashboard/areas"),
       api("/api/escalations"),
+      api("/api/messages?limit=6"),
     ]);
     me = worker;
     $("who").textContent = worker.name;
     renderSummary(summary);
     renderEscalations(escalations);
+    renderMessages(messages);
     renderWorkers(workers);
     renderAreas(areas);
     $("footer").textContent =
@@ -394,6 +498,12 @@ $("loginBtn").onclick = signIn;
 $("pin").addEventListener("keydown", e => { if (e.key === "Enter") signIn(); });
 $("phone").addEventListener("keydown", e => { if (e.key === "Enter") $("pin").focus(); });
 $("refresh").onclick = load;
+$("dispatch").onclick = async () => {
+  const button = $("dispatch");
+  button.disabled = true; button.textContent = "Sending…";
+  try { await api("/api/messages/dispatch", { method: "POST" }); await load(); }
+  finally { button.disabled = false; button.textContent = "Send everything due"; }
+};
 $("signout").onclick = signOut;
 
 if (token) load(); else $("login").classList.remove("hidden");

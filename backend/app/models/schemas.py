@@ -274,6 +274,46 @@ class EscalationOut(ORMModel):
     resolution_note: str | None = None
 
 
+# --- Messages ---------------------------------------------------------------
+
+class MessageOut(ORMModel):
+    id: str
+    message_type: str
+    status: str
+    to_phone: str | None = None
+    to_name: str
+    patient_id: str | None = None
+    patient_name: str = ""
+    visit_id: str | None = None
+    body: str
+    language: str
+    send_after: date | None = None
+    created_at: datetime
+    sent_at: datetime | None = None
+    provider: str | None = None
+    error: str | None = None
+
+
+class MessageList(BaseModel):
+    # Every response says plainly whether anything was really delivered. A
+    # screenshot of this page should never be mistakable for proof that a
+    # family received a WhatsApp message.
+    simulated: bool
+    provider: str
+    # Everything in scope, not just the page returned. The outbox grows by a
+    # few messages per visit, so a reader needs to know whether the handful
+    # shown is the whole story.
+    total: int
+    messages: list[MessageOut]
+
+
+class DispatchResult(BaseModel):
+    considered: int
+    sent: int
+    failed: int
+    simulated: bool
+
+
 # --- Dashboard --------------------------------------------------------------
 
 class DashboardSummary(BaseModel):

@@ -24,6 +24,7 @@ from app.core.immunisation import SCHEDULE
 from app.core.security import hash_aadhaar
 from app.models.db import (
     Escalation,
+    Message,
     InfantRecord,
     MedicalCondition,
     Patient,
@@ -72,14 +73,17 @@ def _now() -> datetime:
 
 
 def wipe_demo_history(db, worker: Worker) -> None:
-    """Clear this worker's visits, follow-ups and escalations so a rehearsal
-    does not leave the next run pre-loaded with red flags."""
+    """Clear this worker's visits, follow-ups, escalations and messages so a
+    rehearsal does not leave the next run pre-loaded with red flags - or with
+    an outbox full of referrals from the last time it was demonstrated."""
     patient_ids = db.scalars(
         select(Patient.id).where(Patient.assigned_worker_id == worker.id)
     ).all()
     if not patient_ids:
         return
 
+    # Messages first: they reference visits.
+    db.execute(delete(Message).where(Message.patient_id.in_(patient_ids)))
     db.execute(delete(Escalation).where(Escalation.patient_id.in_(patient_ids)))
     db.execute(delete(ScheduledVisit).where(ScheduledVisit.patient_id.in_(patient_ids)))
     db.execute(delete(Visit).where(Visit.patient_id.in_(patient_ids)))
@@ -93,7 +97,7 @@ def remove_previous_demo_patients(db) -> None:
     ).all()
     if not ids:
         return
-    for model in (Escalation, ScheduledVisit, Visit, Vaccination,
+    for model in (Message, Escalation, ScheduledVisit, Visit, Vaccination,
                   InfantRecord, PregnancyRecord, MedicalCondition):
         db.execute(delete(model).where(model.patient_id.in_(ids)))
     db.execute(delete(Patient).where(Patient.id.in_(ids)))

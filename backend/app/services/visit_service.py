@@ -19,6 +19,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.agents import pipeline, scheduling
+from app.services import messaging
 from app.models.db import (
     Escalation,
     InputMode,
@@ -105,12 +106,27 @@ def process(db: Session, patient: Patient, visit: Visit) -> Visit:
     visit.status = VisitStatus.complete
 
     _update_patient(db, patient, visit, vitals)
-    _schedule_follow_up(db, patient, visit, state.get("follow_up_in_days"),
-                        state.get("follow_up_reason"))
+    follow_up_due = _schedule_follow_up(
+        db, patient, visit, state.get("follow_up_in_days"),
+        state.get("follow_up_reason"),
+    )
+    escalation_is_new = False
     if level == RiskLevel.red:
-        _raise_escalation(db, patient, visit)
+        escalation_is_new = _raise_escalation(db, patient, visit)
     else:
         _note_improvement(db, patient, visit)
+
+    # Messages last: everything above has settled, so the outbox can describe
+    # what was actually decided. A failure here must not lose the visit - the
+    # clinical record is the thing that matters, the message can be resent.
+    try:
+        messaging.queue_for_visit(
+            db, patient, visit, state,
+            follow_up_due=follow_up_due,
+            escalation_is_new=escalation_is_new,
+        )
+    except Exception:
+        log.exception("Could not queue messages for visit %s", visit.id)
 
     db.flush()
     return visit
@@ -153,7 +169,9 @@ def _schedule_follow_up(
     visit: Visit,
     days: int | None,
     reason: str | None,
-) -> None:
+) -> date:
+    """Books the next visit and returns the date it settled on, so callers do
+    not have to recompute it and risk disagreeing with what was booked."""
     # This visit answers whatever was pending for this patient.
     pending = db.scalars(
         select(ScheduledVisit).where(
@@ -177,6 +195,7 @@ def _schedule_follow_up(
             created_by_visit_id=visit.id,
         )
     )
+    return due
 
 
 def _open_escalation(db: Session, patient_id: str) -> Escalation | None:
@@ -187,7 +206,9 @@ def _open_escalation(db: Session, patient_id: str) -> Escalation | None:
     ).first()
 
 
-def _raise_escalation(db: Session, patient: Patient, visit: Visit) -> None:
+def _raise_escalation(db: Session, patient: Patient, visit: Visit) -> bool:
+    """Returns True only when this opened a genuinely new escalation, so the
+    caller can tell "a new red flag" from "the same one, still open"."""
     reason = visit.risk_rationale or "High risk classification"
     if visit.danger_signs:
         reason = f"{reason} Danger signs: {', '.join(visit.danger_signs[:4])}."
@@ -203,7 +224,7 @@ def _raise_escalation(db: Session, patient: Patient, visit: Visit) -> None:
         existing.reason = reason[:900]
         log.info("Existing escalation for patient %s updated by visit %s",
                  patient.id, visit.id)
-        return
+        return False
 
     db.add(
         Escalation(
@@ -214,6 +235,7 @@ def _raise_escalation(db: Session, patient: Patient, visit: Visit) -> None:
         )
     )
     log.info("Escalation raised for patient %s from visit %s", patient.id, visit.id)
+    return True
 
 
 def _note_improvement(db: Session, patient: Patient, visit: Visit) -> None:

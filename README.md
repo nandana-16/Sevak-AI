@@ -20,6 +20,11 @@ describes the visit in Hindi or Hinglish. Three agents then run:
 | **Risk classification** | Retrieves the relevant passages from an indexed corpus of real Government of India guidelines and classifies 🔴 red / 🟡 yellow / 🟢 green, citing the document and page it used. |
 | **Scheduling** | Decides what the worker should do now, and when to come back. Red gets a same-day check, yellow 2–7 days, green the routine interval for that patient type. |
 
+A red classification also writes the messages that follow from it: a referral
+to the family in their own language, and an alert to the supervising ANM. Every
+visit schedules a reminder for the follow-up it books. **These are simulated** -
+see [Messages](#messages-to-families) below.
+
 If there is no signal, the visit is written to a local queue and uploaded
 automatically when connectivity returns. Nothing is lost.
 
@@ -69,6 +74,7 @@ python -m scripts.smoke_test          # 40 checks over the whole worker journey
 python -m scripts.test_risk_downgrade # risk moves both directions, not just up
 python -m scripts.test_escalations    # one open alert per patient, not duplicates
 python -m scripts.test_dashboard      # supervisor scoping: ANM vs BMO boundaries
+python -m scripts.test_messages       # the outbox: who gets told, and who cannot
 python -m scripts.try_pipeline        # run the agents directly, for prompt tuning
 ```
 
@@ -170,6 +176,37 @@ Both see risk distribution, open escalations (with a count of any left
 unactioned more than two days), per-worker activity, and a village roll-up.
 Escalations can be acknowledged from the dashboard. Field workers are refused
 (403) — they use the phone app.
+
+### Messages to families
+
+A red flag is only worth raising if it reaches someone. Three kinds of message
+come out of the pipeline, and all three appear in the dashboard's outbox with
+their full text:
+
+| Message | Goes to | When |
+|---|---|---|
+| **Referral** | the family | a visit classifies red. The body is the risk agent's own `what_to_tell_the_family`, in the language the visit was recorded in. |
+| **Alert** | the supervising ANM | a *new* red flag is raised. A patient still red on the third visit does not send a third identical alert - it would bury the ones that are new. |
+| **Reminder** | the family | the day before the follow-up the visit booked. |
+
+**The provider is a mock, and the system says so everywhere.** Messages are
+written, queued, scheduled and dispatched exactly as they would be for real, but
+nothing leaves the machine: the API returns `simulated: true` and the dashboard
+carries a banner. A screenshot of the outbox can never be mistaken for proof
+that a family was contacted.
+
+Real delivery is one setting (`MESSAGING_PROVIDER=whatsapp_cloud` plus
+credentials); `_send_via_cloud_api` in
+[`app/services/messaging.py`](backend/app/services/messaging.py) is the real
+call. It is not the default because WhatsApp's free tier - 1,000 service
+conversations a month - still requires a verified Meta Business account, a
+registered sender number, and template approval for anything sent outside a
+24-hour reply window. None of that can be arranged from a laptop.
+
+**A patient with no phone is not silently dropped.** Most infants on a roster
+have no number, so the message is still written and marked
+`no_contact`, with the reason attached, and it stays visible in the outbox -
+because somebody still has to carry that message to the house by hand.
 
 ### Demo sign-in
 
@@ -301,6 +338,10 @@ Everything runs on free tiers.
   (`ai4bharat/conformer-hi-gpu--t4` for Hindi), with Groq's `whisper-large-v3`
   as an automatic fallback. Bhashini is free after registration.
 
+- **Messaging**: simulated. WhatsApp Cloud API's free tier is 1,000 service
+  conversations a month, which would comfortably cover a block, but it is gated
+  behind Meta Business verification rather than behind cost.
+
 The binding constraint is Groq's free tier at **8,000 tokens/minute** — roughly
 **two visits per minute** sustained. A single visit is never slow; only
 back-to-back submissions queue.
@@ -327,8 +368,11 @@ scaling.
   without signal. That trades security for not being logged out mid-round.
 - Two IMNCI PDFs are scanned images with no text layer, so they are not
   indexed. The IMNCI Chart Booklet covers the same ground.
-- No supervisor dashboard or HMIS report export yet; escalations are raised and
-  stored, and the API serves them, but only the app consumes them today.
+- Messages are simulated rather than delivered, for the account-verification
+  reason above. The queue, scheduling, language handling and undeliverable
+  cases are all real; only the final hop is stubbed.
+- No HMIS report export yet. The supervisor dashboard covers the day-to-day
+  questions, but district reporting formats are not generated.
 
 ---
 
@@ -340,9 +384,11 @@ backend/
     agents/       extraction, risk, scheduling, rules, LangGraph pipeline
     core/         config, db, security, aadhaar, roster scoping
     rag/          corpus registry, PDF ingestion, Chroma retrieval
-    routers/      auth, patients, visits, schedule, escalations
-    services/     visit persistence, speech-to-text
-  scripts/        fetch_guidelines, ingest, seed, smoke_test, try_pipeline
+    routers/      auth, patients, visits, schedule, escalations, dashboard,
+                  messages
+    services/     visit persistence, speech-to-text, outbound messages
+  scripts/        fetch_guidelines, ingest, seed, demo_reset, smoke_test,
+                  test_dashboard, test_messages, try_pipeline
 android/
   app/src/main/java/in/sevakai/app/
     data/         Retrofit API, Room cache + queue, repository

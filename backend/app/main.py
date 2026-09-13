@@ -19,7 +19,15 @@ from app.core.database import SessionLocal, init_db
 from app.models.db import Patient
 from app.models.schemas import GuidelineSourceOut, HealthResponse
 from app.rag import store
-from app.routers import auth, dashboard, escalations, patients, schedule, visits
+from app.routers import (
+    auth,
+    dashboard,
+    escalations,
+    messages,
+    patients,
+    schedule,
+    visits,
+)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -73,6 +81,7 @@ app.include_router(visits.router)
 app.include_router(schedule.router)
 app.include_router(escalations.router)
 app.include_router(dashboard.router)
+app.include_router(messages.router)
 
 
 # The supervisor dashboard is a single static page served from the same origin

@@ -178,6 +178,37 @@ Search **`Aarav`** and open **Aarav Rathore** (infant) to show the different pro
 
 ---
 
+### Scene 4b — Who gets told (45 sec) — *on the laptop, not the phone*
+
+Switch to the browser: **<http://localhost:8010/dashboard>**, signed in as
+**Dr. Anita Meena** (`9000000001` / `1234`). Scroll to **Messages to families**.
+
+Roshni's referral is sitting there, in the language the visit was recorded in.
+
+> "A red flag is only worth raising if it reaches someone. The moment that visit
+> classified red, three things were written: a referral to Roshni's family, an
+> alert to the ANM, and a reminder for the follow-up — held back until the day
+> before it's due."
+
+**Say this plainly, before anyone asks:**
+
+> "These are simulated. WhatsApp's free tier exists, but it needs a verified
+> Meta Business account and approved templates, which we can't get for a student
+> project. So everything up to the final hop is real — the wording, the
+> language, the queue, the schedule — and the last hop is stubbed. The banner
+> says so on the page, and the API returns `simulated: true`. Switching to real
+> delivery is one environment variable."
+
+Press **Send everything due** — the pills flip to *Sent*.
+
+If the outbox happens to show a **No phone — tell them in person** message,
+point at it:
+
+> "Most infants have no number. That message doesn't vanish — it stays in the
+> outbox so somebody carries it to the house."
+
+---
+
 ### Scene 5 — Offline (2 min) — *the part people remember*
 
 > "Now the real problem. She's in a village with no signal."
@@ -258,8 +289,10 @@ Be ready for the obvious question:
 ### Closing (30 sec)
 
 > "Three agents on a real corpus of eight Government of India guideline
-> documents — 594 passages, every recommendation traceable to a page. Built to
-> work with no network. About four seconds and two-tenths of a rupee per visit."
+> documents — 594 passages, every recommendation traceable to a page. It decides
+> who needs a hospital today, books the follow-up, and writes the message that
+> tells the family. Built to work with no network. About four seconds and
+> two-tenths of a rupee per visit."
 
 ---
 

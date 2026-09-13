@@ -365,6 +365,59 @@ class Escalation(Base):
     resolved: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
 
 
+class MessageType(str, enum.Enum):
+    referral = "referral"        # to the family: this needs a facility today
+    escalation = "escalation"    # to the supervising ANM: a red flag was raised
+    reminder = "reminder"        # to the family: a visit is due
+
+
+class MessageStatus(str, enum.Enum):
+    scheduled = "scheduled"      # written, waiting for its send date
+    sent = "sent"
+    failed = "failed"
+    no_contact = "no_contact"    # nobody to send it to - see the note below
+
+
+class Message(Base):
+    """An outbound WhatsApp message.
+
+    Stored rather than fired and forgotten, for three reasons: a supervisor
+    needs to see what was actually said to a family, a reminder has to wait for
+    its date, and a message that could not be delivered must stay visible so
+    somebody passes it on by hand.
+
+    That last case is common and easy to forget. Plenty of patients have no
+    phone of their own - infants never do - so `no_contact` is a first-class
+    outcome here, not an error. The worker still has to deliver the advice; the
+    record makes that visible instead of silently dropping it.
+    """
+
+    __tablename__ = "messages"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    message_type: Mapped[MessageType] = mapped_column(Enum(MessageType))
+    status: Mapped[MessageStatus] = mapped_column(
+        Enum(MessageStatus), default=MessageStatus.scheduled, index=True
+    )
+
+    to_phone: Mapped[str | None] = mapped_column(String(15))
+    to_name: Mapped[str] = mapped_column(String(120))
+    # Who this is about, and who it is going to, are different people for an
+    # escalation - the message goes to the ANM, about the patient.
+    patient_id: Mapped[str | None] = mapped_column(ForeignKey("patients.id"), index=True)
+    visit_id: Mapped[str | None] = mapped_column(ForeignKey("visits.id"), index=True)
+    worker_id: Mapped[str | None] = mapped_column(ForeignKey("workers.id"), index=True)
+
+    body: Mapped[str] = mapped_column(Text)
+    language: Mapped[str] = mapped_column(String(10), default="hi")
+
+    send_after: Mapped[date | None] = mapped_column(Date, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now, index=True)
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime)
+    provider: Mapped[str | None] = mapped_column(String(30))
+    error: Mapped[str | None] = mapped_column(Text)
+
+
 class AuditLog(Base):
     """Who looked at or changed which patient record, and when."""
 

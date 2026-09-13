@@ -30,6 +30,13 @@ class Settings(BaseSettings):
     bhashini_api_key: str = ""
     bhashini_pipeline_id: str = "64392f96daac500b55c543cd"
 
+    # Outbound WhatsApp. "mock" records the message and marks it simulated;
+    # "whatsapp_cloud" needs a Meta Business account and a registered sender,
+    # so it is not the default. See app/services/messaging.py.
+    messaging_provider: str = "mock"
+    whatsapp_api_token: str = ""
+    whatsapp_phone_number_id: str = ""
+
     aadhaar_hash_salt: str = "dev-only-salt"
 
     chroma_persist_dir: str = "./data/chroma"
