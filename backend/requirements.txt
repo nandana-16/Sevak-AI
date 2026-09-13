@@ -14,3 +14,6 @@ chromadb>=0.6
 groq>=0.13
 faker>=33.1
 pypdf>=5.1
+# Decodes the app's AAC recordings to the WAV Bhashini requires.
+# Ships ffmpeg in the wheel - no system ffmpeg needed.
+av>=13.0

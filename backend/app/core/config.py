@@ -25,6 +25,11 @@ class Settings(BaseSettings):
     stt_provider: str = "mock"
     whisper_model: str = "small"
 
+    # Bhashini (ULCA) - the Government of India language platform.
+    bhashini_user_id: str = ""
+    bhashini_api_key: str = ""
+    bhashini_pipeline_id: str = "64392f96daac500b55c543cd"
+
     aadhaar_hash_salt: str = "dev-only-salt"
 
     chroma_persist_dir: str = "./data/chroma"

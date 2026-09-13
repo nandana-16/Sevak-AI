@@ -41,7 +41,7 @@ one-line summary, so a worker knows what happened last time before she knocks.
 cd backend
 python -m venv venv && ./venv/Scripts/activate      # Windows
 pip install -r requirements.txt
-cp .env.example .env                                 # then add your Groq key
+cp .env.example .env                                 # add your Groq + Bhashini keys
 python -m scripts.fetch_guidelines                   # downloads 8 NHM PDFs (~28 MB)
 python -m app.rag.ingest --reset                     # builds the vector index
 python -m app.seed --reset                           # 5 workers, ~150 patients
@@ -50,6 +50,17 @@ uvicorn app.main:app --host 0.0.0.0 --port 8010
 
 Get a free Groq key at [console.groq.com/keys](https://console.groq.com/keys)
 and put it in `backend/.env` as `GROQ_API_KEY`.
+
+Speech-to-text for offline-queued audio uses **Bhashini**, the Government of
+India's language platform — register free at
+[bhashini.gov.in](https://bhashini.gov.in) and set `BHASHINI_USER_ID` and
+`BHASHINI_API_KEY`. Without them the app falls back to Groq's Whisper
+automatically, so this is optional to get running.
+
+```bash
+python -m scripts.probe_bhashini   # which models your credentials resolve to
+python -m scripts.test_bhashini    # synthesise Hindi speech, transcribe it back
+```
 
 Verify everything is wired:
 
@@ -125,7 +136,7 @@ disconnect.
 mic reports that recognition is unavailable, install it under
 *Settings → System → Languages & input → On-device recognition*. Everything
 remains usable by typing without it, and the "Record audio for later" button
-captures raw audio that the server transcribes with Whisper regardless.
+captures raw audio that the server transcribes with Bhashini regardless.
 
 ### Running a demo
 
@@ -260,7 +271,9 @@ Everything runs on free tiers.
   visit** across the three agents.
 - **Speech**: Android's on-device recogniser when online (free, no key, works
   offline once the Hindi language pack is installed). Audio queued offline is
-  transcribed by Groq's `whisper-large-v3`.
+  transcribed by **Bhashini**, the Government of India's language platform
+  (`ai4bharat/conformer-hi-gpu--t4` for Hindi), with Groq's `whisper-large-v3`
+  as an automatic fallback. Bhashini is free after registration.
 
 The binding constraint is Groq's free tier at **8,000 tokens/minute** — roughly
 **two visits per minute** sustained. A single visit is never slow; only

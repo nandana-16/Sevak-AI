@@ -92,18 +92,26 @@ the corpus grows to the full NHM library (thousands of pages) or the backend is
 replicated, move to pgvector — which also removes a separate service, since
 Postgres is already there.
 
-### 4. Bhashini for speech
+### 4. Bhashini for speech — now the default
 
-Android's on-device recogniser is free and works offline, but it is trained on
-mainstream Hindi and struggles with strong regional accents and code-mixing.
 [Bhashini](https://bhashini.gov.in) is the Government of India's own language
-platform, covers 22 scheduled languages, and is the politically and technically
-correct answer for a government-facing deployment. It requires registration
-rather than payment.
+platform, covering 22 scheduled languages. It is **wired in and is now the
+default** for offline-queued audio (`STT_PROVIDER=bhashini`). Registration is
+free; there is no per-call charge.
 
-Groq's `whisper-large-v3` (already wired for offline-queued audio) is the
-commercial fallback and is noticeably better than the on-device recogniser on
-accented, code-mixed speech.
+Hindi ASR resolves to `ai4bharat/conformer-hi-gpu--t4`, and the audio stays
+inside Indian government infrastructure — which matters for health data far
+more than the marginal accuracy difference does.
+
+Groq's `whisper-large-v3` remains wired as the automatic fallback: if Bhashini
+is unreachable, a queued visit still transcribes rather than being lost. The
+substitution is logged, never silent.
+
+One integration detail worth knowing: Bhashini's ASR endpoint rejects the AAC
+container the app records (HTTP 500), so the backend converts to 16 kHz mono
+WAV first, using PyAV. The conversion is deliberately server-side — the same
+clip is 13 KB as AAC and 190 KB as WAV, and the phone is the end of the link
+that cannot afford the difference.
 
 ---
 

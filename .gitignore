@@ -31,3 +31,6 @@ android/build/
 android/app/build/
 android/.idea/
 *.iml
+
+# Bhashini probe output contains a short-lived inference token
+backend/bhashini_asr_config.json
