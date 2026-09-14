@@ -41,23 +41,23 @@ licensed integration drops in later without changing anything else.
 
 ### 1. Structural validation
 
-An Aadhaar number is 12 digits and never begins with 0 or 1 — those ranges are
+An Aadhaar number is 12 digits and never begins with 0 or 1. Those ranges are
 reserved and UIDAI does not issue them. Repeated-digit numbers (`999999999999`)
 are rejected as obviously not real.
 
 ### 2. Verhoeff checksum
 
-The last digit of every Aadhaar number is a **Verhoeff check digit** — the same
+The last digit of every Aadhaar number is a **Verhoeff check digit**, the same
 algorithm UIDAI uses. Verhoeff is a dihedral-group (D₅) checksum, chosen
 because unlike a simple modulus it catches **all** single-digit errors and
-**all** adjacent transpositions — the two mistakes a human actually makes when
+**all** adjacent transpositions, the two mistakes a human actually makes when
 copying a number off a card.
 
 The implementation is in [`backend/app/core/aadhaar.py`](../backend/app/core/aadhaar.py).
 
 This is a genuine mathematical check, not a formality. A mistyped digit fails
-it. It cannot tell you the number belongs to the person in front of you — only
-UIDAI can do that — but it eliminates the large majority of real-world data
+it. It cannot tell you the number belongs to the person in front of you, and only
+UIDAI can do that, but it eliminates the large majority of real-world data
 entry errors, which is most of the day-to-day value.
 
 ```
@@ -84,8 +84,8 @@ It does this by comparing **salted HMAC-SHA256 hashes**, not numbers:
 hmac.new(AADHAAR_HASH_SALT, digits, hashlib.sha256).hexdigest()
 ```
 
-The hash is one-way. It permits exactly one operation — "have I seen this
-number before?" — and nothing else. The salt lives in `.env` and is generated
+The hash is one-way. It permits exactly one operation, "have I seen this
+number before?", and nothing else. The salt lives in `.env` and is generated
 per deployment, so hashes are not portable between installations and a stolen
 database cannot be attacked with a precomputed rainbow table of all ~10¹²
 possible Aadhaar numbers.
@@ -99,7 +99,7 @@ possible Aadhaar numbers.
 | Consent flag + timestamp | Any biometric or demographic e-KYC data |
 | Verification method (`offline_verhoeff`) | Any photograph of the card |
 
-The profile screen shows `XXXX XXXX 4312` — the masked form UIDAI itself
+The profile screen shows `XXXX XXXX 4312`, the masked form UIDAI itself
 recommends, enough for a worker to confirm with the patient that they are
 looking at the right record, and useless to anyone who steals the database.
 
@@ -133,8 +133,8 @@ class AadhaarCheck:
 ```
 
 To move to licensed e-KYC, replace the body of `verify()` with the AUA/KUA call
-and set `method="uidai_ekyc"`. Everything downstream — the storage model, the
-consent gate, the masking, the duplicate check, the UI — is unchanged, because
+and set `method="uidai_ekyc"`. Everything downstream stays the same: the storage model, the
+consent gate, the masking, the duplicate check and the UI are unchanged, because
 none of it ever depended on holding the number.
 
 Two other paths are worth knowing about if this project continues:
@@ -143,7 +143,7 @@ Two other paths are worth knowing about if this project continues:
   downloads a digitally signed, share-code-protected XML or QR code from the
   UIDAI site and hands it over. It is signature-verifiable **without** an AUA
   licence, and yields a verified name, DOB, gender and address. This is the
-  natural next step for SevakAI and does not require licensing — it requires
+  natural next step for SevakAI and does not require licensing. It requires
   the patient to have a smartphone or to have obtained the file, which is the
   practical obstacle in rural settings.
 - **ABHA / Ayushman Bharat Health Account (ABDM)**: the government's own health
@@ -151,7 +151,7 @@ Two other paths are worth knowing about if this project continues:
   long-term answer for a health record system. Integration is via the ABDM
   sandbox and does not require an Aadhaar AUA licence.
 
-If asked "why not ABHA from the start?" — the honest answer is that ABHA
+If asked "why not ABHA from the start?", the honest answer is that ABHA
 onboarding requires a registered health facility and an ABDM sandbox
 application, which is out of scope for a five-day build, while the offline
 validation above is fully implementable and defensible today.

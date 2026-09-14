@@ -16,7 +16,7 @@ cd backend
 ./venv/Scripts/python.exe -m uvicorn app.main:app --host 0.0.0.0 --port 8010
 ```
 
-Leave it running in its own window — **you will point at this log during the
+Leave it running in its own window. **You will point at this log during the
 demo** to show the Groq calls happening live.
 
 ### 2. Reset to the demo state
@@ -60,58 +60,58 @@ adb shell am start -n in.sevakai.app/.MainActivity
 **Groq's free tier allows 8,000 tokens per minute, and a visit costs ~3,900.**
 
 That is **two visits per minute**. If you submit a third within the same
-minute, it will sit for 20–30 seconds before returning. It will still work —
-nothing fails — but the pause is awkward on stage.
+minute, it will sit for 20-30 seconds before returning. It will still work and
+nothing fails, but the pause is awkward on stage.
 
 This runbook submits **three visits** and deliberately spaces them with talking
 in between. Do not rush ahead of the script. If you do stall, say so plainly:
-*"that's the free-tier rate limit — the scaling doc has the numbers"* — it is a
+*"that's the free-tier rate limit, the scaling doc has the numbers"*. It is a
 credible answer, not an excuse.
 
 ---
 
 ## The walkthrough
 
-### Scene 1 — The roster (45 sec)
+### Scene 1: The roster (45 sec)
 
 Sign in: **9000000002** / PIN **1234**.
 
 > "This is Sunita Devi, an ASHA worker in Bagru. These are the 43 patients
-> assigned to her — and only hers. This isn't a UI filter; the server refuses
+> assigned to her, and only hers. This isn't a UI filter; the server refuses
 > to return anyone else's patients."
 
 Point at:
-- **Sorted riskiest first** — the eight amber cards are at the top; that's
+- **Sorted riskiest first.** The eight amber cards are at the top; that's
   the order she'd actually walk her round in. Nobody is red yet.
-- **The grey box on each card** — the last visit's summary. "She knows what
+- **The grey box on each card** is the last visit's summary. "She knows what
   happened last time before she knocks on the door."
-- **Every risk chip has a word, not just a colour** — "red/green is exactly the
+- **Every risk chip has a word, not just a colour.** "Red/green is exactly the
   pair a colour-blind reader can't separate, and it's the most important thing
   on the screen."
 
-Tap the **filter pills** — *Pregnant*, *High risk* — and the **search box**.
+Tap the **filter pills** (*Pregnant*, *High risk*) and the **search box**.
 
 ---
 
-### Scene 2 — A patient profile (45 sec)
+### Scene 2: A patient profile (45 sec)
 
 **Type `Roshni` in the search box** and open **Roshni Solanki** (pregnant, currently green).
 
-> "Forty-three patients — she searches, the same as you would."
+> "Forty-three patients, so she searches, the same as you would."
 
 > "Everything the worker needs before the visit, in the order she needs it."
 
 Point at, top to bottom:
 - **Last visit note** at the very top.
-- **Aadhaar shown as `XXXX XXXX 8454`** — "we never store the number. Only a
+- **Aadhaar shown as `XXXX XXXX 8454`.** "We never store the number. Only a
   salted one-way hash and the last four digits."
-- **Pregnancy block** — 32 weeks, EDD, G2P1, ANC visits, last Hb and BP.
-- Scroll to **immunisation** and **medical history** — "these sections appear
+- **Pregnancy block**: 32 weeks, EDD, G2P1, ANC visits, last Hb and BP.
+- Scroll to **immunisation** and **medical history**. "These sections appear
   based on the patient's category. An infant profile looks different."
 
 ---
 
-### Scene 3 — The hero moment: voice → red flag (2.5 min)
+### Scene 3: The hero moment: voice → red flag (2.5 min)
 
 Tap **Record visit**.
 
@@ -128,12 +128,12 @@ Roshni ko teen din se bahut tez sar dard hai aur aankhon ke aage dhundla dikh ra
 Then in **Measurements**, type **BP systolic 168** and **BP diastolic 112**.
 
 > "Note the measurements are a separate typed field. Anything a human types
-> into a labelled box overrides anything the model heard — a number typed by a
+> into a labelled box overrides anything the model heard. A number typed by a
 > person is better evidence than a number recovered from noisy speech."
 
 Tap **Save visit**. It takes about 4 seconds.
 
-**While it runs, point at the backend log** — three `POST … groq.com` lines
+**While it runs, point at the backend log.** Three `POST … groq.com` lines
 appear. "That's the three agents: extraction, risk classification, scheduling."
 
 When the result appears, walk it top to bottom:
@@ -142,10 +142,10 @@ When the result appears, walk it top to bottom:
 |---|---|
 | **Go to hospital today** (red) | "Not 'red'. The action." |
 | The plain-language reason | "Written for a worker with limited formal education. No jargon." |
-| **Danger signs found** | "It read *sar dard* as headache, *dhundla* as blurred vision, *pair me sujan* as pedal oedema — out of Hinglish, not English." |
-| **What to do now** | "Ordered by urgency, and only things an ASHA can personally do — she can't prescribe." |
+| **Danger signs found** | "It read *sar dard* as headache, *dhundla* as blurred vision, *pair me sujan* as pedal oedema, out of Hinglish, not English." |
+| **What to do now** | "Ordered by urgency, and only things an ASHA can personally do, she can't prescribe." |
 | **Next visit** | "Tomorrow. Automatically on her plan." |
-| **Based on NHM guidelines** → *tap to expand* | **This is the moment.** "That's the actual text of the PMSMA High Risk Conditions document, page 3, with the page number. Not the model's memory — retrieved from the real PDF." |
+| **Based on NHM guidelines** → *tap to expand* | **This is the moment.** "That's the actual text of the PMSMA High Risk Conditions document, page 3, with the page number. Not the model's memory, retrieved from the real PDF." |
 
 > "And the safety net: those thresholds also run as plain code. If the model had
 > said yellow, the rules would still have forced red, because 168/112 crosses
@@ -154,11 +154,11 @@ When the result appears, walk it top to bottom:
 
 ---
 
-### Scene 4 — The plan and the escalation (45 sec)
+### Scene 4: The plan and the escalation (45 sec)
 
 Back to the roster (clear the search). **Roshni is now at the top, in red.**
 
-> "Her risk updated from that visit. And it moves both ways — if she's well next
+> "Her risk updated from that visit. And it moves both ways. If she's well next
 > week, she goes back to green. A permanent red label would make the colour
 > meaningless."
 
@@ -167,7 +167,7 @@ Tap the **calendar icon** → the visit plan.
 > "Her follow-up is already scheduled for tomorrow, marked high priority.
 > Nobody typed that in."
 
-Try **snooze** on a red row — it is refused.
+Try **snooze** on a red row. It is refused.
 
 > "A high-risk follow-up can't be postponed. The server rejects it."
 
@@ -178,7 +178,7 @@ Search **`Aarav`** and open **Aarav Rathore** (infant) to show the different pro
 
 ---
 
-### Scene 4b — Who gets told (45 sec) — *on the laptop, not the phone*
+### Scene 4b: Who gets told (45 sec), on the laptop not the phone
 
 Switch to the browser: **<http://localhost:8010/dashboard>**, signed in as
 **Dr. Anita Meena** (`9000000001` / `1234`). Scroll to **Messages to families**.
@@ -187,33 +187,33 @@ Roshni's referral is sitting there, in the language the visit was recorded in.
 
 > "A red flag is only worth raising if it reaches someone. The moment that visit
 > classified red, three things were written: a referral to Roshni's family, an
-> alert to the ANM, and a reminder for the follow-up — held back until the day
+> alert to the ANM, and a reminder for the follow-up, held back until the day
 > before it's due."
 
 **Say this plainly, before anyone asks:**
 
 > "These are simulated. WhatsApp's free tier exists, but it needs a verified
 > Meta Business account and approved templates, which we can't get for a student
-> project. So everything up to the final hop is real — the wording, the
-> language, the queue, the schedule — and the last hop is stubbed. The banner
+> project. So everything up to the final hop is real. The wording, the
+> language, the queue, the schedule are all real, and the last hop is stubbed. The banner
 > says so on the page, and the API returns `simulated: true`. Switching to real
 > delivery is one environment variable."
 
-Press **Send everything due** — the pills flip to *Sent*.
+Press **Send everything due**. The pills flip to *Sent*.
 
-If the outbox happens to show a **No phone — tell them in person** message,
+If the outbox happens to show a **No phone, tell them in person** message,
 point at it:
 
-> "Most infants have no number. That message doesn't vanish — it stays in the
+> "Most infants have no number. That message doesn't vanish. It stays in the
 > outbox so somebody carries it to the house."
 
 ---
 
-### Scene 5 — Offline (2 min) — *the part people remember*
+### Scene 5: Offline (2 min), *the part people remember*
 
 > "Now the real problem. She's in a village with no signal."
 
-**Turn off the network** — in the emulator's side toolbar open **Extended
+**Turn off the network.** In the emulator's side toolbar open **Extended
 controls (⋯) → Cellular → Data status: Denied**, and toggle Wi-Fi off in the
 emulator's notification shade. Or, faster, from a terminal:
 
@@ -223,7 +223,7 @@ adb shell svc wifi disable && adb shell svc data disable
 
 Search **`Bhavna`** and open **Bhavna Chauhan**.
 
-> "The profile still opens. This is the copy saved on the phone —" *(point at
+> "The profile still opens. This is the copy saved on the phone." *(point at
 > the grey offline banner)*.
 
 **Record visit** → Measurements → **BP systolic 142** → **Save visit**.
@@ -235,7 +235,7 @@ network."*
 
 Tap **Done**, then the **cloud icon** on the roster.
 
-> "Here's the queue. She can see her work is safe — one waiting, with the reason
+> "Here's the queue. She can see her work is safe. One waiting, with the reason
 > it hasn't gone yet. A silent background queue would be technically fine and
 > completely untrustworthy to someone who just walked five kilometres."
 
@@ -251,22 +251,22 @@ Wait ~15 seconds and stay on the queue screen.
 
 The row flips to **Sent**, with the risk chip and summary that came back.
 
-> "And it came back *Watch*, not *high risk* — 142 is raised, but below the
+> "And it came back *Medium*, not *High risk*. 142 is raised, but below the
 > 160/110 severe threshold. The guideline distinction, applied automatically."
 
 ---
 
-### Scene 6 — Registration and Aadhaar (1 min)
+### Scene 6: Registration and Aadhaar (1 min)
 
 Roster → **Register**.
 
 Type a wrong Aadhaar first: **1234 5678 9012**
 
-> "Rejected — Aadhaar numbers never start with 0 or 1."
+> "Rejected. Aadhaar numbers never start with 0 or 1."
 
 Now type the valid number `demo_reset` printed (e.g. **4567 8901 2341**).
 
-> "Accepted. That's the Verhoeff checksum — the same algorithm UIDAI uses. It
+> "Accepted. That's the Verhoeff checksum, the same algorithm UIDAI uses. It
 > catches every single-digit typo and every transposition."
 
 Point at the consent checkbox.
@@ -278,10 +278,10 @@ Be ready for the obvious question:
 
 > **"Is this real Aadhaar verification?"**
 > "No, and we're explicit about that. Real e-KYC needs an AUA/KUA licence from
-> UIDAI — there's no public API and no legitimate way for us to call one. So we
+> UIDAI. There's no public API and no legitimate way for us to call one. So we
 > do the parts that can be done honestly offline. Swapping in a licensed
 > integration means replacing one function; nothing else changes. The two routes
-> that *don't* need a licence are UIDAI Offline e-KYC XML and ABHA under ABDM —
+> that *don't* need a licence are UIDAI Offline e-KYC XML and ABHA under ABDM,
 > that's in `docs/AADHAAR.md`."
 
 ---
@@ -289,7 +289,7 @@ Be ready for the obvious question:
 ### Closing (30 sec)
 
 > "Three agents on a real corpus of eight Government of India guideline
-> documents — 594 passages, every recommendation traceable to a page. It decides
+> documents, 594 passages, every recommendation traceable to a page. It decides
 > who needs a hospital today, books the follow-up, and writes the message that
 > tells the family. Built to work with no network. About four seconds and
 > two-tenths of a rupee per visit."
@@ -299,10 +299,10 @@ Be ready for the obvious question:
 ## What to say into the mic
 
 Android's `hi-IN` recogniser returns **Devanagari**, not romanised Hinglish, and
-the extraction prompt reads both. Speak naturally at a normal pace — do not
+the extraction prompt reads both. Speak naturally at a normal pace. Do not
 over-enunciate, it makes recognition worse.
 
-### The hero case — Roshni Solanki (turns red)
+### The hero case: Roshni Solanki (turns red)
 
 > रोशनी को तीन दिन से बहुत तेज़ सर दर्द है और आँखों के आगे धुंधला दिख रहा है।
 > पैर में बहुत सूजन है। बच्चा कल से कम हिल रहा है।
@@ -316,7 +316,7 @@ feet. The baby has been moving less since yesterday.")
 Then **type** BP **168** / **112** in Measurements. Expect: red, four danger
 signs, PMSMA citations, follow-up tomorrow.
 
-### A routine case — Bhavna Chauhan (stays green)
+### A routine case: Bhavna Chauhan (stays green)
 
 > आज रूटीन जाँच थी। कोई शिकायत नहीं है। खाना ठीक खा रही है और आयरन की गोली
 > रोज़ ले रही है। कोई दर्द, बुखार या सूजन नहीं है।
@@ -324,11 +324,11 @@ signs, PMSMA citations, follow-up tomorrow.
 *Aaj routine jaanch thi. Koi shikayat nahi hai. Khana theek kha rahi hai aur
 iron ki goli roz le rahi hai. Koi dard, bukhar ya sujan nahi hai.*
 
-Type BP **112** / **74**. Expect green, and a routine follow-up weeks out —
+Type BP **112** / **74**. Expect green, and a routine follow-up weeks out,
 useful to show immediately after the red case, because it proves the classifier
 is reading the findings rather than flagging everything.
 
-### An infant case — Aarav Rathore (turns red)
+### An infant case: Aarav Rathore (turns red)
 
 > बच्चा दो दिन से दूध नहीं पी रहा है। बहुत सुस्ती है और छूने पर ठंडा लग रहा है।
 > साँस तेज़ चल रही है।
@@ -338,7 +338,7 @@ thanda lag raha hai. Saans tez chal rahi hai.*
 
 ("Not feeding for two days. Very lethargic, cold to the touch. Breathing fast.")
 
-Expect red against IMNCI/HBNC newborn danger signs — a different guideline
+Expect red against IMNCI/HBNC newborn danger signs, a different guideline
 document from the pregnancy case, which is worth pointing out.
 
 ### In English instead
@@ -351,13 +351,13 @@ Tap the **English** pill next to the mic if the Hindi pack is missing:
 
 ### Speak the symptoms, type the numbers
 
-Both work — the prompt handles Hindi numerals, including that
+Both work. The prompt handles Hindi numerals, including that
 "एक सौ अड़सठ बटा एक सौ बारह" is 168/112 and not 158/112, which it originally
 got wrong. But a misheard vital sign is the one error that would genuinely
 matter, so type them.
 
 That is not a workaround, it is the design: values typed into the Measurements
-fields override anything the model heard. Say so out loud —
+fields override anything the model heard. Say so out loud,
 
 > "The story is spoken, the numbers are typed. A number a human put in a
 > labelled box beats a number recovered from noisy audio, so the typed value
@@ -367,7 +367,7 @@ fields override anything the model heard. Say so out loud —
 
 ## Voice on the emulator
 
-**The emulator has no Hindi offline language pack** — the log shows
+**The emulator has no Hindi offline language pack.** The log shows
 `SodaSpeechRecognizer: Failed to get language pack of required locale: error 12`.
 It falls back to Google's *online* recogniser, which needs both a network and
 the emulator's virtual mic wired to your laptop's microphone.
@@ -376,16 +376,16 @@ To try it: **Extended controls (⋯) → Microphone → "Virtual microphone uses
 audio input"**, then tap the mic and speak Hindi into your laptop.
 
 **Recommendation: don't stake the demo on it.** Type the Hinglish text instead
-— typing is a first-class input path in this app, not a workaround, and the
+Typing is a first-class input path in this app, not a workaround, and the
 extraction pipeline is byte-for-byte identical either way. If someone asks
 whether the voice works, say:
 
-> "Yes — on-device recognition, which also works offline once the language pack
+> "Yes. On-device recognition, which also works offline once the language pack
 > is installed. The emulator doesn't ship the Hindi pack, so on a real phone
 > this is the mic; here I'm typing the same sentence into the same field."
 
 If you have a physical phone, `bash scripts/run-on-phone.sh` and demo the mic
-there — that's where it genuinely shines.
+there, and that's where it genuinely shines.
 
 ---
 

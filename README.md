@@ -1,11 +1,21 @@
 # SevakAI
 
-An Android app for ASHA workers — India's last-mile community health workers —
+An Android app for ASHA workers, India's last-mile community health workers,
 that turns a spoken home-visit note into a structured record, a risk
 classification grounded in real National Health Mission guidelines, and a
 scheduled follow-up.
 
 Built to work where the network does not.
+
+**Documentation**
+
+| Page | What is in it |
+|---|---|
+| [docs/FEATURES.md](docs/FEATURES.md) | Every feature, explained end to end. Start here. |
+| [docs/API.md](docs/API.md) | All 27 endpoints, what they take and what they return. |
+| [docs/DEMO.md](docs/DEMO.md) | A rehearsable 8 minute walkthrough, scene by scene. |
+| [docs/AADHAAR.md](docs/AADHAAR.md) | What the Aadhaar check really does, and what it does not. |
+| [docs/SCALING.md](docs/SCALING.md) | Measured cost per visit, and what to buy first. |
 
 ---
 
@@ -18,7 +28,7 @@ describes the visit in Hindi or Hinglish. Three agents then run:
 |---|---|
 | **Extraction** | Pulls symptoms and vitals out of free speech. *"pair me sujan"* becomes `pedal oedema`; *"BP 150 by 100"* becomes `150/100`. |
 | **Risk classification** | Retrieves the relevant passages from an indexed corpus of real Government of India guidelines and classifies 🔴 red / 🟡 yellow / 🟢 green, citing the document and page it used. |
-| **Scheduling** | Decides what the worker should do now, and when to come back. Red gets a same-day check, yellow 2–7 days, green the routine interval for that patient type. |
+| **Scheduling** | Decides what the worker should do now, and when to come back. Red gets a same-day check, yellow 2-7 days, green the routine interval for that patient type. |
 
 A red classification also writes the messages that follow from it: a referral
 to the family in their own language, and an alert to the supervising ANM. Every
@@ -57,7 +67,7 @@ Get a free Groq key at [console.groq.com/keys](https://console.groq.com/keys)
 and put it in `backend/.env` as `GROQ_API_KEY`.
 
 Speech-to-text for offline-queued audio uses **Bhashini**, the Government of
-India's language platform — register free at
+India's language platform. Register free at
 [bhashini.gov.in](https://bhashini.gov.in) and set `BHASHINI_USER_ID` and
 `BHASHINI_API_KEY`. Without them the app falls back to Groq's Whisper
 automatically, so this is optional to get running.
@@ -93,7 +103,7 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
 Needs JDK 17+ and the Android SDK. `local.properties` must point at your SDK
-(use forward slashes — `sdk.dir=C:/Users/you/AppData/Local/Android/Sdk`).
+(use forward slashes, like `sdk.dir=C:/Users/you/AppData/Local/Android/Sdk`).
 
 ### Choosing the server address
 
@@ -109,13 +119,13 @@ rather than just failing.
 | Phone on the same Wi-Fi | `<laptop IP>:8010` | e.g. `192.168.1.7:8010` |
 
 > **`10.0.2.2` is emulator-only.** It is not a real address and does not
-> resolve on a physical phone — where it fails as an ordinary-looking
+> resolve on a physical phone, where it fails as an ordinary-looking
 > connection timeout, which is an expensive thing to debug. The Server screen
 > detects this case and says so explicitly.
 
 ### On the emulator
 
-Use a **Google Play** system image — plain AOSP images ship no speech
+Use a **Google Play** system image. Plain AOSP images ship no speech
 recogniser, so the mic button will report that recognition is unavailable.
 
 ### On a physical phone
@@ -137,7 +147,7 @@ cd android && ./gradlew :app:assembleDebug
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
-`adb reverse` does **not** survive unplugging the phone — re-run it after any
+`adb reverse` does **not** survive unplugging the phone. Re-run it after any
 disconnect.
 
 **Speech on a real device**: Hindi recognition needs the language pack. If the
@@ -161,7 +171,7 @@ the Aadhaar design.
 ### Supervisor dashboard
 
 A web dashboard for **ANMs** and **BMOs**, served by the backend itself at
-**<http://localhost:8010/dashboard>** — no build step, no separate host.
+**<http://localhost:8010/dashboard>**, with no build step and no separate host.
 
 | | ANM | BMO |
 |---|---|---|
@@ -176,7 +186,7 @@ would be worse than useless.
 Both see risk distribution, open escalations (with a count of any left
 unactioned more than two days), per-worker activity, and a village roll-up.
 Escalations can be acknowledged from the dashboard. Field workers are refused
-(403) — they use the phone app.
+(403). They use the phone app.
 
 ### Messages to families
 
@@ -213,10 +223,10 @@ because somebody still has to carry that message to the house by hand.
 
 | Phone | PIN | Role | Sees |
 |---|---|---|---|
-| `9000000002` | `1234` | ASHA — Sunita Devi | her own ~43 patients (phone app) |
-| `9000000001` | `1234` | ANM — Dr. Anita Meena | Sanganer PHC: 2 workers, ~83 patients |
-| `9000000006` | `1234` | ANM — Dr. Priya Yadav | Phagi PHC: 2 workers, ~75 patients |
-| `9000000000` | `1234` | BMO — Dr. Rajesh Sharma | Sanganer block: all 4 workers, ~158 |
+| `9000000002` | `1234` | ASHA, Sunita Devi | her own ~43 patients (phone app) |
+| `9000000001` | `1234` | ANM, Dr. Anita Meena | Sanganer PHC: 2 workers, ~83 patients |
+| `9000000006` | `1234` | ANM, Dr. Priya Yadav | Phagi PHC: 2 workers, ~75 patients |
+| `9000000000` | `1234` | BMO, Dr. Rajesh Sharma | Sanganer block: all 4 workers, ~158 |
 
 The two ANM scopes are deliberately disjoint and the BMO's is exactly their
 union, so the hierarchy is demonstrable rather than merely asserted.
@@ -245,13 +255,13 @@ only to licensed AUA/KUA entities; there is no public API and no legitimate way
 for a student project to call one. So the app does what can be done honestly:
 validates the 12-digit structure and the Verhoeff checksum UIDAI actually uses,
 records explicit consent, and stores **only a salted hash and the last four
-digits** — never the number. Swapping in a real KUA integration means replacing
+digits**, never the number. Swapping in a real KUA integration means replacing
 one function in `backend/app/core/aadhaar.py`; nothing else changes.
 
 → **[docs/AADHAAR.md](docs/AADHAAR.md)** explains this in full: why the Verhoeff
 checksum is a real check and not a formality, why the hash is salted, what is
 and is not stored, and the two upgrade paths (UIDAI Offline e-KYC XML, and
-ABHA/ABDM). Read this before presenting — it is the design decision most likely
+ABHA/ABDM). Read this before presenting. It is the design decision most likely
 to be challenged.
 
 **Deterministic rules are a safety floor, not just a fallback.** The clinical
@@ -264,7 +274,7 @@ about.
 
 **Risk describes today, and moves in both directions.** The floor applies
 *within* a visit, never across visits. A risk level is a statement about the
-patient's condition at that visit, not a label they keep — so a red patient who
+patient's condition at that visit, not a label they keep, so a red patient who
 is well next week is classified green next week, and the roster updates. This
 is load-bearing: if red were sticky, the roster would fill with permanent red
 and the colour would stop carrying information.
@@ -281,7 +291,7 @@ follow-up interval stretches back out (1 day → 14 days).
 Escalations are handled slightly differently on purpose: repeated red visits
 **update** the patient's single open escalation instead of stacking duplicates
 in the supervisor's queue, and a later non-red visit annotates it with the
-improvement — but does **not** auto-resolve it. A red event still needs a human
+improvement, but does **not** auto-resolve it. A red event still needs a human
 to sign it off. See `scripts/test_escalations.py`.
 
 **Degradation is never silent.** When the LLM is unreachable and rules stand in
@@ -290,14 +300,14 @@ can never pass canned output off as live clinical reasoning.
 
 **The queue is the source of truth, the cache is disposable.** Room holds two
 different kinds of data. Cached patients are a mirror of the server and can be
-thrown away. Pending visits are work the server has never seen — losing a row
-means losing a home visit — so a visit is written locally *before* upload is
+thrown away. Pending visits are work the server has never seen. Losing a row
+means losing a home visit, so a visit is written locally *before* upload is
 attempted, and rows are only cleared after the server confirms receipt.
 Idempotency is keyed on a UUID the phone generates, so retrying is always safe.
 
 **Roster scoping lives in one module.** Every query touching patient data goes
 through `backend/app/core/scoping.py`. Requesting another worker's patient
-returns 404, not 403 — a 403 would confirm the patient exists.
+returns 404, not 403. A 403 would confirm the patient exists.
 
 **The language choice reaches the model, not just the labels.** The sign-in
 screen offers हिन्दी or English before anything else on it, because a worker who
@@ -326,18 +336,18 @@ twelve cannot distinguish, and it is the most consequential thing on screen.
 
 594 page-anchored chunks from eight real Government of India documents:
 
-- Home Based Newborn Care — Operational Guidelines (2014)
+- Home Based Newborn Care, Operational Guidelines (2014)
 - Handbook for ASHA Facilitator and ANM/MPW on HBNC and HBYC (2022)
 - High Risk Conditions in Pregnancy (PMSMA)
-- Pradhan Mantri Surakshit Matritva Abhiyan — Guidelines
-- Guidance Note for Extended PMSMA — Tracking High Risk Pregnancies (2022)
-- Anemia Mukt Bharat — Operational Guidelines
+- Pradhan Mantri Surakshit Matritva Abhiyan Guidelines
+- Guidance Note for Extended PMSMA, Tracking High Risk Pregnancies (2022)
+- Anemia Mukt Bharat, Operational Guidelines
 - National Immunization Schedule
 - IMNCI Chart Booklet
 
 Every citation the app shows names the document and the page, so a supervisor
 can open the real PDF and check it. The PDFs are downloaded by
-`scripts/fetch_guidelines.py` rather than committed — they belong to their
+`scripts/fetch_guidelines.py` rather than committed. They belong to their
 publisher.
 
 ---
@@ -358,18 +368,18 @@ Everything runs on free tiers.
   conversations a month, which would comfortably cover a block, but it is gated
   behind Meta Business verification rather than behind cost.
 
-The binding constraint is Groq's free tier at **8,000 tokens/minute** — roughly
+The binding constraint is Groq's free tier at **8,000 tokens/minute**, roughly
 **two visits per minute** sustained. A single visit is never slow; only
 back-to-back submissions queue.
 
-In practice this is not a real limit: a home visit takes 5–10 minutes, so one
+In practice this is not a real limit: a home visit takes 5-10 minutes, so one
 worker generates at most ~12 visits an hour, an order of magnitude below the
 ceiling. It matters only when a scripted demo fires several visits back to back
 (pace them ~30 s apart), or when many workers share one API key.
 
 → **[docs/SCALING.md](docs/SCALING.md)** has the measured per-visit cost, what
 to buy first when the free tier does bite, and the alternatives considered and
-rejected. Headline: at paid Groq rates a visit costs roughly **₹0.10–0.20**, so
+rejected. Headline: at paid Groq rates a visit costs roughly **₹0.10-0.20**, so
 a 200-worker district runs at under ₹10,000/month. Cost is not what stops this
 scaling.
 
@@ -403,14 +413,17 @@ backend/
     routers/      auth, patients, visits, schedule, escalations, dashboard,
                   messages
     services/     visit persistence, speech-to-text, outbound messages
+    static/       the supervisor dashboard, one HTML page
   scripts/        fetch_guidelines, ingest, seed, demo_reset, smoke_test,
-                  test_dashboard, test_messages, try_pipeline
+                  test_dashboard, test_messages, test_glossary, try_pipeline
 android/
   app/src/main/java/in/sevakai/app/
     data/         Retrofit API, Room cache + queue, repository
     speech/       on-device recognition, audio recorder
     sync/         WorkManager queue drain
     ui/           theme, components, screens
+    ui/i18n/      Hindi and English strings
+docs/             the pages listed at the top of this file
 ```
 
 The previous web prototype is preserved on the `legacy/pwa-prototype` branch.
